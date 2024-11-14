@@ -1,0 +1,16 @@
+.RData
+.Rhistory
+.sh_history
+.sudo_as_admin_successful
+ants_visit_data.rds
+calculate_run_time.r
+daisy_chain_functions.R
+monad_occupancy_dataset_ants.rds
+NIMBLE error.r
+transferable_outputs.rds
+UK_grid_refs_monads.csv
+.local/
+shared files by gary and kath
+old
+*.rds
+Other
