@@ -67,6 +67,8 @@ initialise_NIMBLE <- function() {
                               ListLen = ListLen,
                               inclStateRE = inclStateRE)
 
+  print(1)
+
   init.vals <- list(z = dataSumm$occMatrix[1,,], 
                     lam.0 = logit(dataSumm$stats$naiveOcc[1] * 0.99), 
                     sd.psi = 0.5,
@@ -74,6 +76,8 @@ initialise_NIMBLE <- function() {
                     mu.alpha = -1,
                     sd.alpha = 2
                    )
+
+  print(2)
 
   if(inclPhenology){
     init.vals$beta1 <- 180
@@ -83,12 +87,16 @@ initialise_NIMBLE <- function() {
   } else {
     init.vals$alpha.0 <- rnorm(n=dataConstants$nyear, mean= -2, sd=2)
   }
+
+  print(3)
   
   if(inclStateRE){
     init.vals$sd.eta <- 2
     init.vals$eta <- rnorm(n=dataConstants$nsite, mean=0, sd=2)
   }
   
+  print(4)
+
   if(!is.null(ListLen)) {
     if(ListLen == "cont"){
       init.vals$gamma.1 <- 0.1
@@ -99,6 +107,8 @@ initialise_NIMBLE <- function() {
       stop("invalid List Length option")
     }
   }
+
+  print(5)
 
   # step 2 create an operational model from NIMBLE/BUGS code
   model <- nimbleModel(code = modelcode,
@@ -128,11 +138,11 @@ initialise_NIMBLE <- function() {
   execution_time <- end_time - start_time
 
   transferable_outputs <- list(nSpMod = nSpMod, data = obsData, dataSumm = dataSumm, n.iter = n.iter,
-   n.burn = n.burn, Cmodel = Cmodel, CoccMCMC = CoccMCMC, mon2 = length(params2)>0)
-
-  saveRDS(transferable_outputs, file = "transferable_outputs.rds")
+   n.burn = n.burn, Cmodel = Cmodel, CoccMCMC = CoccMCMC, mon2 = length(params2)>0, model = model)
 
   print(paste("Execution time:", execution_time))
   write(paste("Execution time:", execution_time), file = "execution_time.txt")
+
+  return(transferable_outputs)
   
 }

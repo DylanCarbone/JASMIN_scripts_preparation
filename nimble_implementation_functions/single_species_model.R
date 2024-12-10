@@ -2,8 +2,6 @@ single_species_model <- function(sp, spDat, dataSumm,
                                        n.iter, n.burn, n.thin, n.chain,
                                        Cmodel, CoccMCMC, mon2 = FALSE){
 
-        browser()
-
         # apparent occupancy for this species
         Z <- dataSumm$occMatrix[sp,,]
 
@@ -18,8 +16,7 @@ single_species_model <- function(sp, spDat, dataSumm,
         # finish initialization
         spInits <- list(z = Z,
                         lam.0 = logit(dataSumm$stats$naiveOcc[sp] * .99)) # to avoid numeric problem
-        
-        browser()
+
         # issue occurs here
         Cmodel$setInits(spInits)
 

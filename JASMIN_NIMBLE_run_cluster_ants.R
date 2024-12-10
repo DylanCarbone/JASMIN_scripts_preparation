@@ -40,7 +40,7 @@ yps <- 2 #4
 n.iter <- 32e3 # 34e3
 n.burn <- 30e3
 min.Recs <- 50 # number of records per species for inclusion
-inclStateRE <- TRUE 
+inclStateRE <- TRUE
 inclPhenology <- FALSE
 ListLen <- "cat"
 yps <- 2 #4
@@ -86,64 +86,55 @@ dataSumm <- with(formatData(inData,
 jobname <- paste0('dylcar_explore_occ_run_NIMBLE_', format(Sys.Date(), "%d_%m_%Y"))
 
 # Detect the number of cores
-cores_for_clustering = 3
+cores_for_clustering <- 15 # We should explore here whether it is worthwile applying multiple species to each core if the species are processed easily within the wall time
 
-slurm_NIMBLE_occ <- function(node_id){
+# Calculate the total number of species
+total_species <- length(formattedData$sp2incl)
 
-    print(detectCores())
+# Calculate the number of nodes required
+n_nodes_required <- ceiling(total_species / cores_for_clustering)
 
-    transferable_outputs = initialise_NIMBLE() # Will need parameterisation
+# Create a species-to-node mapping
+species_to_node <- rep(1:n_nodes_required, each = cores_for_clustering, length.out = total_species)
 
-    transferable_outputs$data$node = rep(1:ceiling(dim(transferable_outputs$data[[1]])[1] / cores_for_clustering), each = cores_for_clustering)[1:dim(transferable_outputs$data[[1]])[1]]
+# Define the Slurm function
+slurm_NIMBLE_occ <- function(node_id) {
 
-    sub_occ_data = transferable_outputs$data %>% filter(node = node_id)
+  transferable_outputs = initialise_NIMBLE()
 
-    parallel::mclapply(sub_occ_data, function(sp_i){ # 1:transferable_outputs$nSpMod
+    # Filter species for the given node
+    species_indices <- which(species_to_node == node_id)
+    sub_species_data <- transferable_outputs$data[[1]][species_indices, , drop = FALSE]
 
-      yearEff <- single_species_model(sp = sp_i,
-                        spDat = lapply(sub_occ_data, function(x) x[sp_i,]),
-                        dataSumm = transferable_outputs$dataSumm,
-                        n.iter = transferable_outputs$n.iter,
-                        n.burn = transferable_outputs$n.burn,
-                        n.thin = n.thin,
-                        n.chain = n.chain,
-                        transferable_outputs$Cmodel, transferable_outputs$CoccMCMC,
-                        mon2 = transferable_outputs$mon2)
+    # Process species in parallel within the node
+    yearEff <- parallel::mclapply(species_indices, function(sp_i) {
+        single_species_model(sp = sp_i,
+                              spDat = list(sub_species_data[sp_i, , drop = FALSE]),
+                              dataSumm = transferable_outputs$dataSumm,
+                              n.iter = transferable_outputs$n.iter,
+                              n.burn = transferable_outputs$n.burn,
+                              n.thin = n.thin,
+                              n.chain = n.chain,
+                              Cmodel = transferable_outputs$Cmodel,
+                              CoccMCMC = transferable_outputs$CoccMCMC,
+                              mon2 = transferable_outputs$mon2)
+    }, mc.cores = cores_for_clustering)
 
-    }, mc.cores = getOption("mc.cores", cores_for_clustering))
+    names(yearEff) <- dimnames(transferable_outputs$dataSumm$occMatrix)[[1]][species_indices]
+    attr(yearEff, "modelCode") <- transferable_outputs$model$getCode()
 
-
-        yearEff <- parallel::mclapply(1:cores_for_clustering, function(sp_i){
-          single_species_model(sp = sp_i,
-                        spDat = lapply(sub_occ_data, function(x) x[sp_i,]),
-                        dataSumm = transferable_outputs$dataSumm,
-                        n.iter = transferable_outputs$n.iter,
-                        n.burn = transferable_outputs$n.burn,
-                        n.thin = n.thin,
-                        n.chain = n.chain,
-                        transferable_outputs$Cmodel, transferable_outputs$CoccMCMC,
-                        mon2 = transferable_outputs$mon2)
-        },
-        mc.cores = getOption("mc.cores", cores_for_clustering)  #av_cores
-        )
-
-        names(yearEff) <- dimnames(transferable_outputs$dataSumm$occMatrix)[[1]][1:transferable_outputs$nSpMod]
-        attr(yearEff, "modelCode") <- transferable_outputs$model$getCode()
-
-        saveRDS(yearEff, file = "yearEff.rds")   
+    saveRDS(yearEff, file = paste0("yearEff_node_", node_id, ".rds"))
 }
 
-n_nodes_required = length(unique(rep(1:ceiling(dim(formattedData$obsData$y)[1] / cores_for_clustering), each = cores_for_clustering)[1:dim(formattedData$obsData$y)[1]]))
-
-# Create the job using rslurm that compiles the initial model
-sjob <- slurm_apply(f = slurm_NIMBLE_occ,
-                    params = data.frame(node_id = 1:n_nodes_required),
-                    jobname = jobname,
-                    nodes = n_nodes_required,
-                    cpus_per_node = cores_for_clustering, # Test keeping a core spare
-                    submit = TRUE,
-                    global_objects = c("formattedData", "dataSumm", "inclStateRE", "ListLen", "inclPhenology", "all.Pars", "n.iter", "n.burn", "maxSp", "defineModel_SS", "cores_for_clustering", "n.thin", "n.chain", "initialise_NIMBLE", "single_species_model"),
-                    slurm_options = list(time = '10:00:00', 
-                                         mem = 20000,
-                                         partition = 'par-single',
-                                         error = '%a.err'))
+# Create the Slurm job
+sjob <- slurm_apply(
+    f = slurm_NIMBLE_occ,
+    params = data.frame(node_id = 1:n_nodes_required),
+    jobname = jobname,
+    nodes = n_nodes_required, # ask for extra core
+    cpus_per_node = cores_for_clustering,
+    submit = TRUE,
+    global_objects = c("initialise_NIMBLE", "defineModel_SS", "species_to_node", "n_nodes_required", 
+                       "cores_for_clustering", "n.thin", "n.chain", "single_species_model", "n_nodes_required", "total_species", "formattedData", "dataSumm", "maxSp", "n.iter", "n.burn", "inclStateRE", "inclPhenology", "ListLen", "all.Pars", "ListLen"),
+    slurm_options = list(time = '10:00:00', mem = 20000, partition = 'par-single', error = '%a.err')
+)

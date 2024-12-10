@@ -262,5 +262,6 @@ formatData <- function(inData,
 
   return(list(dataConstants = dataConstants,
               obsData = obsData,
-              md = md))
+              md = md,
+              sp2incl = sp2incl))
 }

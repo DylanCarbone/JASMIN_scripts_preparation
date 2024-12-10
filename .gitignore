@@ -14,3 +14,7 @@ shared files by gary and kath
 old
 *.rds
 Other
+occNimble
+.Rproj.user
+execution_time.txt
+JAGS runtime log on JASMIN with a maximum of 7 nodes.csv
