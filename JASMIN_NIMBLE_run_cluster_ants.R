@@ -24,26 +24,20 @@ library(cowplot) # cowplot: plotting
 library(readr)
 library(stringr)
 library(sparta) # sparta: occupancy models
-library(BRCindicators) # BRCindicators: abundance and occupancy indicators
 library(lubridate)
 library('rslurm')
-library(nimble) 
-library(coda)
+library(nimble)
 library(parallel)
-
-# From DataLabs
-# library(occNimble) # nicks nimble implementation
 
 # Same parameters as Nick's run
 maxSp <- 999 #5
 yps <- 2 #4
-n.iter <- 32e3 # 34e3
-n.burn <- 30e3
+n.iter <- 32e3 # 32e3
+n.burn <- 30e3 # 30e3
 min.Recs <- 50 # number of records per species for inclusion
 inclStateRE <- TRUE
 inclPhenology <- FALSE
 ListLen <- "cat"
-yps <- 2 #4
 all.Pars <- c("sd.psi", "lam.0", "mu.alpha", "sd.alpha", "gamma.1", "gamma.2")#, "psi.fs")
 n.thin = 5
 n.chain = 3
@@ -98,43 +92,104 @@ n_nodes_required <- ceiling(total_species / cores_for_clustering)
 species_to_node <- rep(1:n_nodes_required, each = cores_for_clustering, length.out = total_species)
 
 # Define the Slurm function
-slurm_NIMBLE_occ <- function(node_id) {
+slurm_NIMBLE_occ <- function(node_i) {
 
-  transferable_outputs = initialise_NIMBLE()
+  node_start_time <- Sys.time()
 
-    # Filter species for the given node
-    species_indices <- which(species_to_node == node_id)
-    sub_species_data <- transferable_outputs$data[[1]][species_indices, , drop = FALSE]
+  transferable_outputs <- initialise_NIMBLE()
 
-    # Process species in parallel within the node
-    yearEff <- parallel::mclapply(species_indices, function(sp_i) {
-        single_species_model(sp = sp_i,
-                              spDat = list(sub_species_data[sp_i, , drop = FALSE]),
-                              dataSumm = transferable_outputs$dataSumm,
-                              n.iter = transferable_outputs$n.iter,
-                              n.burn = transferable_outputs$n.burn,
-                              n.thin = n.thin,
-                              n.chain = n.chain,
-                              Cmodel = transferable_outputs$Cmodel,
-                              CoccMCMC = transferable_outputs$CoccMCMC,
-                              mon2 = transferable_outputs$mon2)
-    }, mc.cores = cores_for_clustering)
+  intialisation_run_time <- as.numeric((Sys.time() - node_start_time)/60)
 
-    names(yearEff) <- dimnames(transferable_outputs$dataSumm$occMatrix)[[1]][species_indices]
-    attr(yearEff, "modelCode") <- transferable_outputs$model$getCode()
+  # Filter species for the given node
+  species_indices <- which(species_to_node == node_i)
+  sub_species_data <- transferable_outputs$data[[1]][species_indices, , drop = FALSE]
 
-    saveRDS(yearEff, file = paste0("yearEff_node_", node_id, ".rds"))
+  logs <- parallel::mclapply(species_indices, function(core_i) {
+    core_start_time <- Sys.time()
+    
+    species_name <- dimnames(transferable_outputs$dataSumm$occMatrix)[[1]][species_indices][core_i]
+    
+    # Initialise the log entry
+    log_entry <- data.frame(
+      taxa_group = "Ants",
+      species_name = species_name,
+      JASMIN = TRUE,
+      queue = "par-single",
+      n_nodes_requested = n_nodes_required,
+      n_node_cores = cores_for_clustering,
+      NIMBLE_initialisation_run_time = intialisation_run_time,
+      node_iteration = node_i,
+      node_start_time = node_start_time,
+      node_end_time = NA,
+      node_run_time = NA,
+      core_iteration = core_i,
+      core_start_time = format(core_start_time, "%Y-%m-%d %H:%M:%S"),
+      core_end_time = NA,
+      core_run_time = NA,
+      output_object_size_GB = NA,
+      stringsAsFactors = FALSE
+    )
+
+    tryCatch({
+      # Run the single species model
+      sp_output <- single_species_model(
+        sp = core_i,
+        spDat = list(sub_species_data[core_i, , drop = FALSE]),
+        dataSumm = transferable_outputs$dataSumm,
+        n.iter = transferable_outputs$n.iter,
+        n.burn = transferable_outputs$n.burn,
+        n.thin = n.thin,
+        n.chain = n.chain,
+        Cmodel = transferable_outputs$Cmodel,
+        CoccMCMC = transferable_outputs$CoccMCMC,
+        mon2 = transferable_outputs$mon2
+      )
+      
+      core_end_time <- Sys.time()
+      
+      log_entry$core_end_time <- format(core_end_time, "%Y-%m-%d %H:%M:%S")
+      log_entry$core_run_time <- as.numeric(difftime(core_end_time, core_start_time, units = "hours"))
+      log_entry$output_object_size_GB <- as.numeric(object.size(sp_output)) / (1024^3)
+      
+      # Save the species output
+      saveRDS(sp_output, paste0(species_name, ".rds"))
+      rm(sp_output)
+      gc()
+  }, error = function(e) {
+    # Save error message to a text file
+    error_message <- paste0("Error for species: ", species_name, "\n", conditionMessage(e))
+    writeLines(error_message, paste0(species_name, "_error.txt"))
+    
+    # Update the log entry with error info
+    log_entry$core_end_time <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+    log_entry$core_run_time <- as.numeric(difftime(Sys.time(), core_start_time, units = "hours"))
+    log_entry$error_message <- conditionMessage(e)
+  })
+  
+  return(log_entry)
+}, mc.cores = cores_for_clustering)
+
+    node_log <- do.call(rbind, logs)
+
+    node_end_time <- Sys.time()
+
+    node_log$node_end_time = node_end_time
+
+    node_log$node_run_time = as.numeric(difftime(node_end_time, node_start_time, units = "hours"))
+
+    write.csv(node_log, paste0("node_", node_i, "_log.csv"))
+
 }
 
 # Create the Slurm job
 sjob <- slurm_apply(
     f = slurm_NIMBLE_occ,
-    params = data.frame(node_id = 1:n_nodes_required),
+    params = data.frame(node_i = 1:n_nodes_required),
     jobname = jobname,
     nodes = n_nodes_required, # ask for extra core
     cpus_per_node = cores_for_clustering,
     submit = TRUE,
     global_objects = c("initialise_NIMBLE", "defineModel_SS", "species_to_node", "n_nodes_required", 
-                       "cores_for_clustering", "n.thin", "n.chain", "single_species_model", "n_nodes_required", "total_species", "formattedData", "dataSumm", "maxSp", "n.iter", "n.burn", "inclStateRE", "inclPhenology", "ListLen", "all.Pars", "ListLen"),
-    slurm_options = list(time = '10:00:00', mem = 20000, partition = 'par-single', error = '%a.err')
+                       "cores_for_clustering", "n.thin", "n.chain", "single_species_model", "n_nodes_required", "total_species", "formattedData", "dataSumm", "maxSp", "n.iter", "n.burn", "inclStateRE", "inclPhenology", "ListLen", "all.Pars"),
+    slurm_options = list(time = '10:00:00', mem = 40000, partition = 'par-single', error = '%a.err')
 )
