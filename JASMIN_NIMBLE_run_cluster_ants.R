@@ -102,12 +102,12 @@ slurm_NIMBLE_occ <- function(node_i) {
 
   # Filter species for the given node
   species_indices <- which(species_to_node == node_i)
-  sub_species_data <- transferable_outputs$data[[1]][species_indices, , drop = FALSE]
+  sub_species_data <- transferable_outputs$data[[1]][species_indices, ,drop = FALSE]
 
   logs <- parallel::mclapply(species_indices, function(core_i) {
     core_start_time <- Sys.time()
     
-    species_name <- dimnames(transferable_outputs$dataSumm$occMatrix)[[1]][species_indices][core_i]
+    species_name <- transferable_outputs$dataSumm$stats$species[core_i]
     
     # Initialise the log entry
     log_entry <- data.frame(
@@ -119,7 +119,7 @@ slurm_NIMBLE_occ <- function(node_i) {
       n_node_cores = cores_for_clustering,
       NIMBLE_initialisation_run_time = intialisation_run_time,
       node_iteration = node_i,
-      node_start_time = node_start_time,
+      node_start_time = format(node_start_time, "%Y-%m-%d %H:%M:%S"),
       node_end_time = NA,
       node_run_time = NA,
       core_iteration = core_i,
@@ -134,7 +134,7 @@ slurm_NIMBLE_occ <- function(node_i) {
       # Run the single species model
       sp_output <- single_species_model(
         sp = core_i,
-        spDat = list(sub_species_data[core_i, , drop = FALSE]),
+        spDat = list(sub_species_data[rownames(sub_species_data) == species_name, , drop = FALSE]),
         dataSumm = transferable_outputs$dataSumm,
         n.iter = transferable_outputs$n.iter,
         n.burn = transferable_outputs$n.burn,
@@ -145,26 +145,22 @@ slurm_NIMBLE_occ <- function(node_i) {
         mon2 = transferable_outputs$mon2
       )
       
-      core_end_time <- Sys.time()
-      
-      log_entry$core_end_time <- format(core_end_time, "%Y-%m-%d %H:%M:%S")
-      log_entry$core_run_time <- as.numeric(difftime(core_end_time, core_start_time, units = "hours"))
-      log_entry$output_object_size_GB <- as.numeric(object.size(sp_output)) / (1024^3)
-      
-      # Save the species output
-      saveRDS(sp_output, paste0(species_name, ".rds"))
-      rm(sp_output)
-      gc()
   }, error = function(e) {
     # Save error message to a text file
     error_message <- paste0("Error for species: ", species_name, "\n", conditionMessage(e))
     writeLines(error_message, paste0(species_name, "_error.txt"))
-    
-    # Update the log entry with error info
-    log_entry$core_end_time <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-    log_entry$core_run_time <- as.numeric(difftime(Sys.time(), core_start_time, units = "hours"))
-    log_entry$error_message <- conditionMessage(e)
   })
+
+    core_end_time <- Sys.time()
+    
+    log_entry$core_end_time <- format(core_end_time, "%Y-%m-%d %H:%M:%S")
+    log_entry$core_run_time <- as.numeric(difftime(core_end_time, core_start_time, units = "hours"))
+    log_entry$output_object_size_GB <- as.numeric(object.size(sp_output)) / (1024^3)
+    
+    # Save the species output
+    saveRDS(sp_output, paste0(species_name, ".rds"))
+    rm(sp_output)
+    gc()
   
   return(log_entry)
 }, mc.cores = cores_for_clustering)
@@ -173,7 +169,7 @@ slurm_NIMBLE_occ <- function(node_i) {
 
     node_end_time <- Sys.time()
 
-    node_log$node_end_time = node_end_time
+    node_log$node_end_time = format(node_end_time, "%Y-%m-%d %H:%M:%S")
 
     node_log$node_run_time = as.numeric(difftime(node_end_time, node_start_time, units = "hours"))
 
