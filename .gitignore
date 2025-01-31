@@ -18,3 +18,5 @@ occNimble
 .Rproj.user
 execution_time.txt
 JAGS runtime log on JASMIN with a maximum of 7 nodes.csv
+diana_nimble/butterfly_data/BNM_formattedOccData_2022.rdata
+diana_nimble/butterfly_data/BNM_2022.rdata
