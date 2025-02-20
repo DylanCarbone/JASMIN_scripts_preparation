@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+#SBATCH --array=0-60
+#SBATCH --cpus-per-task=4
+#SBATCH --job-name=run_parallel_butterfly
+#SBATCH --output=slurm_%a.out
+#SBATCH --time=48:00:00
+#SBATCH --mem=60000
+#SBATCH --partition=par-single
+#SBATCH --error=%a.err
+
+module load jasr
+
+/apps/jasmin/jaspy/miniforge_envs/jasr4.3/mf3-23.11.0-0/envs/jasr4.3-mf3-23.11.0-0-v20240815/lib/R/bin/Rscript --vanilla DIANA_par_threads.r

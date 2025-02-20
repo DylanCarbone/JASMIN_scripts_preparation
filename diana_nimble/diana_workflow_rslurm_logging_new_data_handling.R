@@ -5,19 +5,19 @@ module load jasr # For loading R workspace ??
 R
 
 library(parallel)
-library(rslurm)
 library(nimble)
 library(tidyverse)
 library(MCMCvis)
 library(dplyr)
 library(Matrix)
+library(rslurm)
 
 # Model parameters
 n.chains <- 3
 ni <- 32000 # 32000
 nb <- 30000 # 30000
 nt <- 5
-min.Recs <- 50 # 50 # number of records per species for inclusion
+min.Recs <- 50 # 10 # number of records per species for inclusion
 
 # Set working directory
 setwd("dylcar_explore_occ_user")
@@ -57,9 +57,9 @@ allSpecies <- sort(speciesSummary$Species[speciesSummary$nuRecs > min.Recs])
 # Prepare data
 data <- data %>%
   mutate(visit = paste(Date, SiteID, sep = "_"))
-
-occMatrix <- reshape2::acast(data, visit ~ Species, value.var = "Species", fun = length)
-occMatrix[occMatrix > 0] <- 1
+  
+species_counts <- split(data, data$Species) %>%
+  lapply(function(df){ table(df$visit)})
 
 visit_df <- data %>%
   group_by(visit, Year, SiteID) %>%
@@ -139,11 +139,22 @@ NIMBLE_run = function(species_i){
   myspecies <- allSpecies[species_i]
   print(myspecies)
 
-  visit_df$Species <- occMatrix[,myspecies]
+  # Retrieve species counts from list
+  species_counts_i <- species_counts[[myspecies]]
+
+  # Match visits and replace NA with 0
+  visit_df$Species <- ifelse(visit_df$visit %in% names(species_counts_i), species_counts_i[visit_df$visit], 0)
+
+  # Convert to numeric
   nimbleData <- list(y = as.numeric(visit_df$Species))
 
   #specify inits
-  z_inits <- reshape2::acast(visit_df, siteIndex ~ yearIndex, value.var="Species", fun = max)
+  z_inits <- visit_df %>%
+    group_by(siteIndex, yearIndex) %>%
+    summarise(Species = max(Species, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = yearIndex, values_from = Species, values_fill = 0) %>%
+    select(-siteIndex) %>%
+    as.matrix()
 
   #ignore warning message
   z_inits[is.na(z_inits)] <- 0
@@ -201,6 +212,6 @@ sjob <- slurm_apply(
   nodes = length(allSpecies),
   cpus_per_node = 1,
   submit = TRUE,
-  global_objects = c("allSpecies", "nimbleConstants", "mynimbleCode", "visit_df", "occMatrix", "ni", "nb", "nt", "n.chains"),
+  global_objects = c("allSpecies", "nimbleConstants", "mynimbleCode", "visit_df", "ni", "nb", "nt", "n.chains"),
   slurm_options = list(time = "168:00:00", mem = 60000, partition = "long-serial", error = "%a.err") ### HERE
 )

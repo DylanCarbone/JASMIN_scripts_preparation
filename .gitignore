@@ -20,3 +20,8 @@ execution_time.txt
 JAGS runtime log on JASMIN with a maximum of 7 nodes.csv
 diana_nimble/butterfly_data/BNM_formattedOccData_2022.rdata
 diana_nimble/butterfly_data/BNM_2022.rdata
+ant_and_bee_logs.csv
+butterfly_data/BNM_2022.rdata
+butterfly_data/BNM_formattedOccData_2022.rdata
+diana_nimble/past_JASMIN_runs
+*model_fitting_log.txt
