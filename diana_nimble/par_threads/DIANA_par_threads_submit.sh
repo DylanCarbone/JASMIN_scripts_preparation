@@ -1,11 +1,11 @@
 #!/bin/bash
 #
-#SBATCH --array=0-60
+#SBATCH --array=0-4
 #SBATCH --cpus-per-task=4
-#SBATCH --job-name=run_parallel_butterfly
+#SBATCH --job-name=run_parallel_threads
 #SBATCH --output=slurm_%a.out
-#SBATCH --time=48:00:00
-#SBATCH --mem=60000
+#SBATCH --time=02:00:00
+#SBATCH --mem=20000
 #SBATCH --partition=par-single
 #SBATCH --error=%a.err
 

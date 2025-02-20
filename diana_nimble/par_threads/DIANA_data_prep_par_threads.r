@@ -14,10 +14,17 @@ library(Matrix)
 
 # Model parameters
 n.chains <- 3
-ni <- 32000 # 32000
-nb <- 30000 # 30000
+ni <- 100 # 32000
+nb <- 90 # 30000
 nt <- 5
-min.Recs <- 50 # number of records per species for inclusion
+min.Recs <- 10 # 50 number of records per species for inclusion
+
+# Test data thinning
+thin_data = TRUE
+
+# FOR TESTING ONLY
+# Take a sample of rows. If NULL, it is ignored
+sample_records = NULL
 
 # Set working directory
 setwd("dylcar_explore_occ_user")
@@ -28,6 +35,44 @@ data <- readRDS("formatted_butterfly_data.rds") %>%
   mutate(Date = as.Date(Date),
          yday = lubridate::yday(Date),
          Year = lubridate::year(Date))
+
+# if(thin_data){
+
+# visitSummary = data %>%
+#   group_by(SiteID, Year) %>%
+#   summarise(nuVisits = length(unique(paste(Date, SiteID, sep = "_"))))
+
+# summary(visitSummary$nuVisits)
+
+# visit_df <- visit_df %>%
+#   group_by(grid, year) %>%
+#   mutate(mySample = ifelse(length(visit)>20, 20, length(visit))) %>%
+#   sample_n(.,size=unique(mySample)) %>%
+#   ungroup()
+
+#   #how often do we have multiple visits (date-grid) in the same grid/year (if you want can also stratify by month)
+# visitSummary <- visit_df %>%
+#                 group_by(grid, year) %>%
+#                 summarise(nuVisits = length(unique(visit)))
+
+# summary(visitSummary$nuVisits)
+# #typically this will be strongly skewed
+
+# #cap at 20 visits per grid and year # or a number of your choice
+# visit_df <- visit_df %>%
+#   group_by(grid, year) %>%
+#   mutate(mySample = ifelse(length(visit)>20, 20, length(visit))) %>%
+#   sample_n(.,size=unique(mySample)) %>%
+#   ungroup()
+
+# Of subsampling 'zero' grids outside species range too
+
+# }
+
+# FOR TESTING
+if (!is.null(sample_records)){
+  data = data %>% sample_n(sample_records)
+}
 
 # Filter data for sites with records across multiple years
 siteSummary <- data %>%
@@ -105,7 +150,7 @@ mynimbleCode <- nimbleCode({
 })
 
 # Generate the job name with the current date
-jobname <- paste0('dylcar_explore_occ_run_DIANA_NIMBLE_BUTTERFLIES_par_threads', "_", format(Sys.Date(), "%d_%m_%Y"))
+jobname <- paste0('dylcar_explore_occ_run_DIANA_NIMBLE_ants_par_threads', "_", format(Sys.Date(), "%d_%m_%Y"))
 dir.create(jobname)
 
 saveRDS(allSpecies, file.path(jobname, "allSpecies.RDS"))
@@ -117,8 +162,6 @@ saveRDS(nb, file.path(jobname, "nb.RDS"))
 saveRDS(nt, file.path(jobname, "nt.RDS"))
 saveRDS(n.chains, file.path(jobname, "n.chains.RDS"))
 saveRDS(species_counts, file.path(jobname, "species_counts.RDS"))
-
-names(species_counts)
 
 # Please request:
 
