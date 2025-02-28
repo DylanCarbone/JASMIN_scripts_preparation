@@ -31,7 +31,6 @@ ni = readRDS("ni.RDS")
 nb = readRDS("nb.RDS")
 nt = readRDS("nt.RDS")
 n.chains = readRDS("n.chains.RDS")
-species_counts = readRDS("species_counts.RDS")
 
 NIMBLE_run_parallel = function(species_i){
 
@@ -41,9 +40,11 @@ NIMBLE_run_parallel = function(species_i){
 
   myspecies <- allSpecies[species_i]
   print(myspecies)
+
+  single_species_counts = readRDS(file.path("species_data", paste0(myspecies, ".RDS")))
   
   # Match visits and replace NA with 0
-  visit_df$Species <- ifelse(visit_df$visit %in% names(species_counts), species_counts[visit_df$visit], 0)
+  visit_df$Species <- ifelse(visit_df$visit %in% names(single_species_counts), single_species_counts[visit_df$visit], 0)
 
   nimbleData <- list(y = as.numeric(visit_df$Species))
   
@@ -101,7 +102,7 @@ NIMBLE_run_parallel = function(species_i){
   })
   
   log_entry <- data.frame(
-    taxa_group = "Ants with 3 parallel threads",
+    taxa_group = "Butterfies with 3 parallel threads",
     species_name = myspecies,
     JASMIN = TRUE,
     queue = "par-single",

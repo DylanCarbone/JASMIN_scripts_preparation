@@ -83,6 +83,9 @@ nimbleConstants <- list(
 mynimbleCode <- nimbleCode({
   for (i in 1:nsite){
     for (t in 1:nyear){
+      
+      psi.fs[t] <- sum(z[1:nsite,t])/nsite
+      
       logit(psi[i,t]) <-  year.fixed[t] + site.random[i]
       z[i,t] ~ dbern(psi[i,t])
     }

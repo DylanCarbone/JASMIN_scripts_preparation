@@ -14,13 +14,10 @@ library(Matrix)
 
 # Model parameters
 n.chains <- 3
-ni <- 100 # 32000
-nb <- 90 # 30000
+ni <- 32000 # 32000
+nb <- 30000 # 30000
 nt <- 5
-min.Recs <- 10 # 50 number of records per species for inclusion
-
-# Test data thinning
-thin_data = TRUE
+min.Recs <- 50 # 50 number of records per species for inclusion
 
 # FOR TESTING ONLY
 # Take a sample of rows. If NULL, it is ignored
@@ -36,40 +33,6 @@ data <- readRDS("formatted_butterfly_data.rds") %>%
          yday = lubridate::yday(Date),
          Year = lubridate::year(Date))
 
-# if(thin_data){
-
-# visitSummary = data %>%
-#   group_by(SiteID, Year) %>%
-#   summarise(nuVisits = length(unique(paste(Date, SiteID, sep = "_"))))
-
-# summary(visitSummary$nuVisits)
-
-# visit_df <- visit_df %>%
-#   group_by(grid, year) %>%
-#   mutate(mySample = ifelse(length(visit)>20, 20, length(visit))) %>%
-#   sample_n(.,size=unique(mySample)) %>%
-#   ungroup()
-
-#   #how often do we have multiple visits (date-grid) in the same grid/year (if you want can also stratify by month)
-# visitSummary <- visit_df %>%
-#                 group_by(grid, year) %>%
-#                 summarise(nuVisits = length(unique(visit)))
-
-# summary(visitSummary$nuVisits)
-# #typically this will be strongly skewed
-
-# #cap at 20 visits per grid and year # or a number of your choice
-# visit_df <- visit_df %>%
-#   group_by(grid, year) %>%
-#   mutate(mySample = ifelse(length(visit)>20, 20, length(visit))) %>%
-#   sample_n(.,size=unique(mySample)) %>%
-#   ungroup()
-
-# Of subsampling 'zero' grids outside species range too
-
-# }
-
-# FOR TESTING
 if (!is.null(sample_records)){
   data = data %>% sample_n(sample_records)
 }
@@ -120,9 +83,12 @@ nimbleConstants <- list(
 )
 
 mynimbleCode <- nimbleCode({
-  for (i in 1:nsite){
-    for (t in 1:nyear){
-      logit(psi[i,t]) <-  year.fixed[t] + site.random[i]
+  for (t in 1:nyear) {  # Outer loop over years
+
+    psi.fs[t] <- sum(z[1:nsite, t]) / nsite  # Now defined once per year
+
+    for (i in 1:nsite) {  # Inner loop over sites
+      logit(psi[i,t]) <- year.fixed[t] + site.random[i]
       z[i,t] ~ dbern(psi[i,t])
     }
   }
@@ -150,23 +116,32 @@ mynimbleCode <- nimbleCode({
 })
 
 # Generate the job name with the current date
-jobname <- paste0('dylcar_explore_occ_run_DIANA_NIMBLE_ants_par_threads', "_", format(Sys.Date(), "%d_%m_%Y"))
-dir.create(jobname)
+jobname <- paste0('dylcar_explore_occ_run_DIANA_NIMBLE_BUTTERFLIES_par_threads', "_", format(Sys.Date(), "%d_%m_%Y"))
+jobname_full <- paste0("_rslurm_", jobname)
 
-saveRDS(allSpecies, file.path(jobname, "allSpecies.RDS"))
-saveRDS(nimbleConstants, file.path(jobname, "nimbleConstants.RDS"))
-saveRDS(mynimbleCode, file.path(jobname, "mynimbleCode.RDS"))
-saveRDS(visit_df, file.path(jobname, "visit_df.RDS"))
-saveRDS(ni, file.path(jobname, "ni.RDS"))
-saveRDS(nb, file.path(jobname, "nb.RDS"))
-saveRDS(nt, file.path(jobname, "nt.RDS"))
-saveRDS(n.chains, file.path(jobname, "n.chains.RDS"))
-saveRDS(species_counts, file.path(jobname, "species_counts.RDS"))
+dir.create(jobname_full)
+
+# Save each of the species counts as a seperate dataframe
+for (species in names(species_counts)){
+
+  dir.create(file.path(jobname_full, "species_data"), showWarnings = FALSE)
+
+  saveRDS(species_counts[[species]], file.path(jobname_full, "species_data", paste0(species, ".RDS")))
+}
+
+saveRDS(allSpecies, file.path(jobname_full, "allSpecies.RDS"))
+saveRDS(nimbleConstants, file.path(jobname_full, "nimbleConstants.RDS"))
+saveRDS(mynimbleCode, file.path(jobname_full, "mynimbleCode.RDS"))
+saveRDS(visit_df, file.path(jobname_full, "visit_df.RDS"))
+saveRDS(ni, file.path(jobname_full, "ni.RDS"))
+saveRDS(nb, file.path(jobname_full, "nb.RDS"))
+saveRDS(nt, file.path(jobname_full, "nt.RDS"))
+saveRDS(n.chains, file.path(jobname_full, "n.chains.RDS"))
 
 # Please request:
 
 #array size
 paste0("0-", length(allSpecies)-1)
 
-# Cores per node
+# cpus-per-task
 n.chains + 1
