@@ -1,6 +1,6 @@
 library(dplyr)
 
-log_files = list.files("diana_nimble/past_JASMIN_runs", pattern = "_log.csv", recursive = TRUE, full.name = TRUE)
+log_files = list.files("past_JASMIN_runs", pattern = "_log.csv", recursive = TRUE, full.name = TRUE)
 
 log_list = list()
 
@@ -8,7 +8,15 @@ for (i in seq_along(log_files)){
 
     file = log_files[i]
 
-  log_list[[i]] = read.csv(file)
+    df = read.csv(file)
+
+    if (grepl("butterflies", tolower(file))){
+
+      df$taxa_group = "butterflies_frequentist"
+      df$NIMBLE_initialisation_run_time = NA
+    }
+
+  log_list[[i]] = df
 }
 
 # Safe rbind function
@@ -31,7 +39,7 @@ df <- bind_same_cols(log_list)
 df = df %>% select(-X) %>%
 mutate(NIMBLE_initialisation_run_time = ifelse(taxa_group %in% c("Ants", "Bees"), (NIMBLE_initialisation_run_time)/60, NIMBLE_initialisation_run_time))
 
-write.csv(df, "ant_and_bee_logs.csv")
+write.csv(df, "run_logs.csv")
 
 ################################
 

@@ -25,3 +25,5 @@ butterfly_data/BNM_2022.rdata
 butterfly_data/BNM_formattedOccData_2022.rdata
 diana_nimble/past_JASMIN_runs
 *model_fitting_log.txt
+past_JASMIN_runs
+run_logs.csv
