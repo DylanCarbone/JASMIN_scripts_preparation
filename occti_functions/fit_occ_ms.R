@@ -6,7 +6,6 @@
 #'@param occformula Formula for occupancy probability
 #'@param detformula Formula for detection probability
 #'@param covnames Vector of covariate names in obdata
-#'@param cpus Optional specification for the number of cpus when \code{parallel = TRUE}. Otherwise chosen based on cores available and the number of species.
 #'@param seed Option random seed value to set
 #'@param minyear Optional filter to first year of interest
 #'@param maxyear Optional filter to last year of interest
@@ -28,7 +27,6 @@ fit_occ_ms <- function(splist,
                       occformula = "~North+I(North^2)+East+I(East^2)",
                       detformula = "~logLL+SEAS",
                       covnames = c("East","North"),
-                      cpus = NULL,
                       seed = NULL,
                       minyear = NULL,
                       maxyear = NULL,

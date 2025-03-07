@@ -1,8 +1,0 @@
-Model initialized
-Model compiled
-MCMC built
-MCMC compiled
-Model initialized
-Model compiled
-MCMC built
-MCMC compiled

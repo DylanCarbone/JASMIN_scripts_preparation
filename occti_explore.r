@@ -38,15 +38,16 @@ data <- readRDS("monad_occupancy_dataset_ants.rds") %>%
 # Rename columns to match expected function inputs
 setnames(data, "SiteID", "Gridref")  # Rename SiteID to Gridref
 
-#############################
-
 gb_ir <- split(data, igr_is_valid(data$Gridref))
-names(gb_ir) = ifelse(length(gb_ir) ==2, c("gb", "ir"), "gb")
+
+if (length(gb_ir) == 2) {
+  names(gb_ir) <- c("gb", "ir")
+} else {
+  names(gb_ir) <- "gb"
+}
 
 # For now, I will use only british data
 data = gb_ir$gb
-
-############################
 
 # Convert Date column and extract Year, Month, Week
 data <- add_dates(data)
@@ -87,14 +88,14 @@ data$East = positions$easting
 data_range = range(data$Year)
 
 occti_run = function(species_i){
-
+  
     node_start_time = Sys.time()
 
     myspecies <- allSpecies[species_i]
     print(myspecies)
 
     # Run the single-species occupancy model
-    occupancy_result <- fit_occ(
+    occupancy_result  <- fit_occ(
     spp = myspecies,
     obdata = data,
     occformula = "~ North + I(North^2) + East + I(East^2)",  # Quadratic spatial covariates
@@ -112,7 +113,7 @@ occti_run = function(species_i){
     saveRDS(occupancy_result, paste0(myspecies, "_occupancy_output.rds"))
 
     log_entry <- data.frame(
-    taxa_group = "Butterflies", ### HERE
+    taxa_group = "Ants", ### HERE
     species_name = myspecies,
     JASMIN = TRUE,
     queue = "long-serial",
@@ -124,6 +125,7 @@ occti_run = function(species_i){
   )
 
     write.csv(log_entry, paste0(myspecies, "_log.csv"))
+
 }
 
 # Generate the job name with the current date
@@ -139,8 +141,8 @@ sjob <- slurm_apply(
   cpus_per_node = 1,
   submit = TRUE,
   global_objects = c("allSpecies", "data", "data_range", "add_dates", "fit_occ", "fit_trend", "expit", "pcfunc", "pcfunc2", "sigfunc"),
-  slurm_options = list(time = "01:00:00", mem = 20000, error = "%a.err",
-  account = "ceh_generic", partition = "standard", qos = "short") ### HERE
+  slurm_options = list(time = "24:00:00", mem = 30000, error = "%a.err",
+  account = "ceh_generic", partition = "standard", qos = "long") ### HERE
 )
 
 #SBATCH --account=mygws
