@@ -6,11 +6,8 @@ R
 
 library(parallel)
 library(rslurm)
-library(nimble)
 library(tidyverse)
-library(MCMCvis)
 library(dplyr)
-library(Matrix)
 library(rnrfa)
 
 library(data.table)
@@ -29,7 +26,7 @@ source(file)
 }
 
 # Read and preprocess data
-data <- readRDS("monad_occupancy_dataset_ants.rds") %>% 
+data <- readRDS("formatted_butterfly_data.rds") %>% 
   rename(Species = tik, SiteID = GRIDREF, Date = lower_date) %>%
   mutate(Date = as.Date(Date),
          yday = lubridate::yday(Date),
@@ -113,7 +110,7 @@ occti_run = function(species_i){
     saveRDS(occupancy_result, paste0(myspecies, "_occupancy_output.rds"))
 
     log_entry <- data.frame(
-    taxa_group = "Ants", ### HERE
+    taxa_group = "Butterflies", ### HERE
     species_name = myspecies,
     JASMIN = TRUE,
     queue = "long-serial",
@@ -129,7 +126,7 @@ occti_run = function(species_i){
 }
 
 # Generate the job name with the current date
-jobname <- paste0('dylcar_explore_occ_run_OCCTI_ANTS', "_", format(Sys.Date(), "%d_%m_%Y"))
+jobname <- paste0('dylcar_explore_occ_run_OCCTI_BUTTERFLIES', "_", format(Sys.Date(), "%d_%m_%Y"))
 dir.create(paste0("_rslurm_", jobname))
 
 # Slurm job submission
