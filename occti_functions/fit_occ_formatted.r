@@ -21,7 +21,7 @@
 #'@import unmarked
 #'@export
 
-fit_occ <- function(spp,
+fit_occ_formatted <- function(spp,
                     obdata,
                     occformula = "~North+I(North^2)+East+I(East^2)",
                     detformula = "~logLL+SEAS",
@@ -156,8 +156,6 @@ fit_occ <- function(spp,
     obdatak <- obdatak %>%
         filter(Month %in% month1:month2) %>%
         left_join(pweek, by = "Week")
-
-    #HERE
 
     # --- Set up binary occurrence column: 1 if species present, 0 otherwise ---
     obdatak <- obdatak %>%
@@ -297,8 +295,6 @@ fit_occ <- function(spp,
     aicsk <- data.frame(Year = kyear, start = 1:nstart, AIC = aicsk)
     aics <- bind_rows(aics, aicsk)
 
-    #HERE
-
     # --- Save output if the model fit is valid ---
     if (class(occfit)[1] != "try-error" &&
         min(diag(unmarked::vcov(occfit))) > 0) {
@@ -380,7 +376,6 @@ fit_occ <- function(spp,
     }
     }
 
-      # HERE
   }
 
     # --- Record end time ---

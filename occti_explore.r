@@ -52,6 +52,8 @@ data <- add_dates(data)
 # Calculate list length (number of species observed per site-date)
 data <- add_listL(data)
 
+hist(data$listL)
+
 # Summarise species
 speciesSummary <- data %>%
   group_by(Species) %>%
@@ -84,6 +86,10 @@ data$East = positions$easting
 
 data_range = range(data$Year)
 
+# Scale Northing and Easting variables
+data$North_s <- scale(data$North)
+data$East_s <- scale(data$East)
+
 occti_run = function(species_i){
   
     node_start_time = Sys.time()
@@ -92,19 +98,28 @@ occti_run = function(species_i){
     print(myspecies)
 
     # Run the single-species occupancy model
-    occupancy_result  <- fit_occ(
+    occupancy_result  <- fit_occ_formatted(
     spp = myspecies,
     obdata = data,
-    occformula = "~ North + I(North^2) + East + I(East^2)",  # Quadratic spatial covariates
+    occformula = "~ North_s + I(North_s^2) + East_s + I(East_s^2)",  # Quadratic spatial covariates
     detformula = "~ logLL + SEAS",  # Detection probability model
-    covnames = c("East", "North"),  # Covariates used
+    covnames = c("East_s", "North_s"),  # Covariates used
     minyear = data_range[1],  # Start year
     maxyear = data_range[2],  # End year
-    trendyears = data_range,  # Years for trend estimation
-    nstart = 1,  # Number of initial values to test
+    trendyears = data_range[1],  # Years for trend estimation
+    nstart = 10,  # Number of initial values to test
     outputdir = "",  # Directory to save results
     engine = "C"
     )
+
+    # Extract trend data for a species
+    plot = ggplot(occupancy_result$Index, aes(x = Year, y = psiA)) +
+      geom_line(size = 1, color = "blue") +
+      geom_ribbon(aes(ymin = psiA_L, ymax = psiA_U), alpha = 0.2) +
+      labs(x = "Year", y = "Occupancy Index") +
+      theme_minimal()
+
+    ggsave(paste0("plots/", myspecies, ".png"), plot = plot)
 
     # Save the results
     saveRDS(occupancy_result, paste0(myspecies, "_occupancy_output.rds"))
@@ -137,8 +152,8 @@ sjob <- slurm_apply(
   nodes = length(allSpecies),
   cpus_per_node = 1,
   submit = TRUE,
-  global_objects = c("allSpecies", "data", "data_range", "add_dates", "fit_occ", "fit_trend", "expit", "pcfunc", "pcfunc2", "sigfunc"),
-  slurm_options = list(time = "24:00:00", mem = 30000, error = "%a.err",
+  global_objects = c("allSpecies", "data", "data_range", "add_dates", "fit_occ_formatted", "fit_trend", "expit", "pcfunc", "pcfunc2", "sigfunc"),
+  slurm_options = list(time = "48:00:00", mem = 30000, error = "%a.err",
   account = "ceh_generic", partition = "standard", qos = "long") ### HERE
 )
 
