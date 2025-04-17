@@ -1,5 +1,4 @@
 # setup the session and R ...
-module load jaspy # For loading python workspace ??
 module load jasr # For loading R workspace ??
 
 R
@@ -25,8 +24,10 @@ for (file in list.files("occti_functions", full.names = TRUE)){
 source(file)
 }
 
+taxa_group = "Ants"
+
 # Read and preprocess data
-data <- readRDS("formatted_butterfly_data.rds") %>% 
+data <- readRDS("monad_occupancy_dataset_ants.rds") %>% 
   rename(Species = tik, SiteID = GRIDREF, Date = lower_date) %>%
   mutate(Date = as.Date(Date),
          yday = lubridate::yday(Date),
@@ -87,15 +88,17 @@ data$East = positions$easting
 data_range = range(data$Year)
 
 # Scale Northing and Easting variables
-data$North_s <- scale(data$North)
-data$East_s <- scale(data$East)
+data$North_s <- as.numeric(scale(data$North))
+data$East_s <- as.numeric(scale(data$East))
 
 occti_run = function(species_i){
   
-    node_start_time = Sys.time()
+  node_start_time = Sys.time()
 
-    myspecies <- allSpecies[species_i]
-    print(myspecies)
+  myspecies <- allSpecies[species_i]
+  print(myspecies)
+
+  for (nstart_i in 1:10){
 
     # Run the single-species occupancy model
     occupancy_result  <- fit_occ_formatted(
@@ -107,8 +110,7 @@ occti_run = function(species_i){
     minyear = data_range[1],  # Start year
     maxyear = data_range[2],  # End year
     trendyears = data_range[1],  # Years for trend estimation
-    nstart = 10,  # Number of initial values to test
-    outputdir = "",  # Directory to save results
+    nstart = nstart_i,  # Number of initial values to test
     engine = "C"
     )
 
@@ -119,13 +121,21 @@ occti_run = function(species_i){
       labs(x = "Year", y = "Occupancy Index") +
       theme_minimal()
 
-    ggsave(paste0("plots/", myspecies, ".png"), plot = plot)
+    if (!dir.exists("plots")){
+      dir.create("plots")
+    }
+
+    ggsave(paste0("plots/", myspecies, "_nstart_", nstart_i, ".png"), plot = plot)
+
+    if (!dir.exists("results")){
+      dir.create("results")
+    }
 
     # Save the results
-    saveRDS(occupancy_result, paste0(myspecies, "_occupancy_output.rds"))
+    saveRDS(occupancy_result, paste0("results/", myspecies, "_nstart_", nstart_i,  "_occupancy_output.rds"))
 
     log_entry <- data.frame(
-    taxa_group = "Butterflies", ### HERE
+    taxa_group = taxa_group, ### HERE
     species_name = myspecies,
     JASMIN = TRUE,
     queue = "long-serial",
@@ -133,15 +143,21 @@ occti_run = function(species_i){
     node_start_time = format(node_start_time, "%Y-%m-%d %H:%M:%S"),
     node_end_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     node_run_time = as.numeric(difftime(Sys.time(), node_start_time, units = "hours")),
+    n_start_val = nstart_i,
     stringsAsFactors = FALSE
   )
 
-    write.csv(log_entry, paste0(myspecies, "_log.csv"))
+    if (!dir.exists("logs")){
+      dir.create("logs")
+    }
 
+    write.csv(log_entry, paste0("logs/", myspecies, "_nstart_", nstart_i,  "_log.csv"))
+      
+    }
 }
 
 # Generate the job name with the current date
-jobname <- paste0('dylcar_explore_occ_run_OCCTI_BUTTERFLIES', "_", format(Sys.Date(), "%d_%m_%Y"))
+jobname <- paste0('dylcar_explore_occ_run_OCCTI_', toupper(taxa_group), "_", format(Sys.Date(), "%d_%m_%Y"))
 dir.create(paste0("_rslurm_", jobname))
 
 # Slurm job submission
@@ -152,8 +168,8 @@ sjob <- slurm_apply(
   nodes = length(allSpecies),
   cpus_per_node = 1,
   submit = TRUE,
-  global_objects = c("allSpecies", "data", "data_range", "add_dates", "fit_occ_formatted", "fit_trend", "expit", "pcfunc", "pcfunc2", "sigfunc"),
-  slurm_options = list(time = "48:00:00", mem = 30000, error = "%a.err",
+  global_objects = c("allSpecies", "data", "data_range", "add_dates", "fit_occ_formatted", "fit_trend", "expit", "pcfunc", "pcfunc2", "sigfunc", "taxa_group"),
+  slurm_options = list(time = "24:00:00", mem = 30000, error = "%a.err",
   account = "ceh_generic", partition = "standard", qos = "long") ### HERE
 )
 
