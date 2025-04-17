@@ -16,6 +16,7 @@ library(igr)
 
 # Model parameters
 min.Recs <- 50 # 50 # number of records per species for inclusion
+nyr <- 2 # minimum number of years sampled
 
 # Set working directory
 setwd("dylcar_explore_occ_user")
@@ -64,6 +65,18 @@ speciesSummary <- data %>%
 
 # Define species list
 allSpecies <- sort(speciesSummary$Species[speciesSummary$nuRecs > min.Recs])
+
+# Subset by the number of visits to each site, removing sites that had data recorded for only 1 year
+sites_to_include = data %>% distinct(Gridref, Year) %>% 
+  group_by(Gridref) %>%
+  summarise(n_years_sampled = n()) %>%
+  filter(n_years_sampled >= nyr) %>%
+  pull(Gridref)
+
+length(sites_to_include)
+length(unique(data$Gridref))
+
+data = data %>% filter(Gridref %in% sites_to_include)
 
 combinations <- c(
   "SA", "TA", "NA", "HA", "OA", "IA", "SB", "TB", "NB", "HB", "OB", "IB", "SC", "TC", "NC",
