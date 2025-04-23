@@ -4,7 +4,7 @@ library(ggplot2)
 library(patchwork)  # For side-by-side plots
 
 ants_sparta_paths = list.files("occ_comparison/ants_occ_outputs", pattern = "*.rdata", full.names = TRUE)
-ants_occti_paths = list.files("occ_comparison/_rslurm_dylcar_explore_occ_run_OCCTI_ANTS_03_04_2025/results", pattern = "*nstart_5_occupancy_output.rds", full.names = TRUE)
+ants_occti_paths = list.files("occ_comparison/_rslurm_dylcar_explore_occ_run_OCCTI_ANTS_17_04_2025/results", pattern = "*nstart_5_occupancy_output.rds", full.names = TRUE)
 
 sparta_ants_outputs = list()
 

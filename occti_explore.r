@@ -17,6 +17,7 @@ library(igr)
 # Model parameters
 min.Recs <- 50 # 50 # number of records per species for inclusion
 nyr <- 2 # minimum number of years sampled
+nstart_vector <- 5 # Number of starting values
 
 # Set working directory
 setwd("dylcar_explore_occ_user")
@@ -111,7 +112,7 @@ occti_run = function(species_i){
   myspecies <- allSpecies[species_i]
   print(myspecies)
 
-  for (nstart_i in 1:10){
+  for (nstart_i in nstart_vector){
 
     # Run the single-species occupancy model
     occupancy_result  <- fit_occ_formatted(
@@ -182,8 +183,8 @@ sjob <- slurm_apply(
   cpus_per_node = 1,
   submit = TRUE,
   global_objects = c("allSpecies", "data", "data_range", "add_dates", "fit_occ_formatted", "fit_trend", "expit", "pcfunc", "pcfunc2", "sigfunc", "taxa_group"),
-  slurm_options = list(time = "24:00:00", mem = 30000, error = "%a.err",
-  account = "ceh_generic", partition = "standard", qos = "long") ### HERE
+  slurm_options = list(time = "01:00:00", mem = 30000, error = "%a.err",
+  account = "ceh_generic", partition = "standard", qos = "short") ### HERE
 )
 
 #SBATCH --account=mygws
