@@ -26,10 +26,10 @@ for (file in list.files("occti_functions", full.names = TRUE)){
 source(file)
 }
 
-taxa_group = "Ants"
+taxa_group = "Butterflies"
 
 # Read and preprocess data
-data <- readRDS("monad_occupancy_dataset_ants.rds") %>% 
+data <- readRDS("formatted_butterfly_data.rds") %>% 
   rename(Species = tik, SiteID = GRIDREF, Date = lower_date) %>%
   mutate(Date = as.Date(Date),
          yday = lubridate::yday(Date),
@@ -54,8 +54,6 @@ data <- add_dates(data)
 
 # Calculate list length (number of species observed per site-date)
 data <- add_listL(data)
-
-hist(data$listL)
 
 # Summarise species
 speciesSummary <- data %>%
@@ -92,7 +90,7 @@ combinations <- c(
   "HX", "OX", "IX", "SY", "TY", "NY", "HY", "OY", "IY", "SZ", "TZ", "NZ", "HZ", "OZ", "IZ"
 )
 
-data <- data[data$Gridref %in% grep(paste0("^(", paste(combinations, collapse = "|"), ")"), data$Gridref, value = TRUE), ]
+data <- data[!data$Gridref %in% grep(paste0("^(", paste(combinations, collapse = "|"), ")"), data$Gridref, value = TRUE), ]
 
 positions = rnrfa::osg_parse(grid_refs = data$Gridref, coord_system = "BNG")
 
@@ -182,9 +180,9 @@ sjob <- slurm_apply(
   nodes = length(allSpecies),
   cpus_per_node = 1,
   submit = TRUE,
-  global_objects = c("allSpecies", "data", "data_range", "add_dates", "fit_occ_formatted", "fit_trend", "expit", "pcfunc", "pcfunc2", "sigfunc", "taxa_group"),
-  slurm_options = list(time = "01:00:00", mem = 30000, error = "%a.err",
-  account = "ceh_generic", partition = "standard", qos = "short") ### HERE
+  global_objects = c("allSpecies", "data", "data_range", "add_dates", "fit_occ_formatted", "fit_trend", "expit", "pcfunc", "pcfunc2", "sigfunc", "taxa_group", "nstart_vector"),
+  slurm_options = list(time = "24:00:00", mem = 30000, error = "%a.err",
+  account = "ceh_generic", partition = "standard", qos = "long") ### HERE
 )
 
 #SBATCH --account=mygws

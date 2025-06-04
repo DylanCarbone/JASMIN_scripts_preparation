@@ -2,9 +2,11 @@ library(dplyr)
 library(sparta)
 library(ggplot2)
 library(patchwork)  # For side-by-side plots
+library(mgcv)
+library(ggplot2)
 
 ants_sparta_paths = list.files("occ_comparison/ants_occ_outputs", pattern = "*.rdata", full.names = TRUE)
-ants_occti_paths = list.files("occ_comparison/_rslurm_dylcar_explore_occ_run_OCCTI_ANTS_17_04_2025/results", pattern = "*nstart_5_occupancy_output.rds", full.names = TRUE)
+ants_occti_paths = list.files("occ_comparison/_rslurm_dylcar_explore_occ_run_OCCTI_ANTS_01_05_2025/results", pattern = "*nstart_5_occupancy_output.rds", full.names = TRUE)
 
 sparta_ants_outputs = list()
 
@@ -42,9 +44,6 @@ occti_ants_outputs <- occti_ants_outputs[names(occti_ants_outputs) %in% names(sp
 sparta_ants_outputs <- sparta_ants_outputs[names(sparta_ants_outputs) %in% names(occti_ants_outputs)]
 length(occti_ants_outputs) == length(sparta_ants_outputs)
 
-# List of shared species
-species_list <- names(sparta_ants_outputs)
-
 dir.create("occupancy_comparison_plots")
 
 # Loop through each species
@@ -56,22 +55,40 @@ for (species in names(occti_ants_outputs)) {
     theme(plot.title = element_text(hjust = 0.5))
 
   # occti plot
-  occti_data <- occti_ants_outputs[[species]]$Index
+  occ_data <- occti_ants_outputs[[species]]$Index
 
-  occti_plot <- ggplot(occti_data, aes(x = Year, y = psiA)) + 
-    geom_line(size = 1, color = "blue") +
-    geom_ribbon(aes(ymin = psiA_L, ymax = psiA_U), alpha = 0.2) +
+  loess_fit <- loess(psiA ~ Year, data = occ_data, span = .5)
+  occ_data$psiA_loess <- predict(loess_fit)
+
+  ggplot(occ_data, aes(x = Year)) + 
+    geom_line(aes(y = psiA), colour = "blue", alpha = 0.25) +
+    geom_ribbon(aes(ymin = psiA_L, ymax = psiA_U), fill = "blue", alpha = 0.15) +
+    geom_line(aes(y = psiA_loess), colour = "forestgreen", size = 1.2) +
     labs(x = "Year", y = "Occupancy Index") +
-    ggtitle(paste(species, "- occti")) +
-    theme_minimal() +
-    theme(plot.title = element_text(hjust = 0.5))
-  
-  # Combine and print
-  combined_plot <- sparta_plot + occti_plot
+    theme_minimal()
+
+  # Step 1: Estimate standard errors from CI
+  occ_data$psiA_se <- (occ_data$psiA_U - occ_data$psiA_L) / (2 * 1.96)
+
+  # Step 2: Compute weights as inverse variance
+  occ_data$psiA_weight <- 1 / (occ_data$psiA_se^2)
+
+  # Step 3: Fit weighted LOESS
+  loess_weighted <- loess(psiA ~ Year, data = occ_data, span = 0.25, weights = psiA_weight)
+  occ_data$psiA_loess_weighted <- predict(loess_weighted)
+
+  # Plot
+  occti_plot <- ggplot(occ_data, aes(x = Year)) + 
+    geom_line(aes(y = psiA), colour = "blue", alpha = 0.25) +
+    geom_ribbon(aes(ymin = psiA_L, ymax = psiA_U), fill = "blue", alpha = 0.15) +
+    geom_line(aes(y = psiA_loess_weighted), colour = "forestgreen", size = 1.2) +
+    labs(x = "Year", y = "Occupancy Index") +
+    theme_minimal()
+    
+    # Combine and print
+    combined_plot <- sparta_plot + occti_plot
 
   # ---- Save to file ----
   file_name <- paste0("occupancy_comparison_plots", "/", species, "_comparison.png")
   ggsave(filename = file_name, plot = combined_plot, width = 12, height = 6, dpi = 300)
 }
-
-saveRDS(occti_ants_outputs, "occti_ants_outputs_all_species.RDS")

@@ -27,7 +27,7 @@ sample_records = NULL
 setwd("dylcar_explore_occ_user")
 
 # Read and preprocess data
-data <- readRDS("formatted_butterfly_data.rds") %>% 
+data <- readRDS("monad_occupancy_dataset_ants.rds") %>% 
   rename(Species = tik, SiteID = GRIDREF, Date = lower_date) %>%
   mutate(Date = as.Date(Date),
          yday = lubridate::yday(Date),
@@ -129,6 +129,7 @@ for (species in names(species_counts)){
   saveRDS(species_counts[[species]], file.path(jobname_full, "species_data", paste0(species, ".RDS")))
 }
 
+saveRDS(species_counts, file.path(jobname_full, "species_counts.RDS"))
 saveRDS(allSpecies, file.path(jobname_full, "allSpecies.RDS"))
 saveRDS(nimbleConstants, file.path(jobname_full, "nimbleConstants.RDS"))
 saveRDS(mynimbleCode, file.path(jobname_full, "mynimbleCode.RDS"))
