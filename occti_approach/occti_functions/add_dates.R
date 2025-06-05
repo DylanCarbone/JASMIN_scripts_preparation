@@ -1,5 +1,5 @@
 #' Format date information in the data
-#'@param obdata Data frame containing species occurrence records with the following columns: Species, Date, Gridref, Year, Week, Month, and optionally covnames (see below) and listL
+#'@param obdata Data frame containing species occurrence records with the following columns: species, Date, gridref, Year, Week, Month, and optionally covnames (see below) and listL
 
 add_dates <- function(obdata){
                 if (!requireNamespace("lubridate", quietly = TRUE)) {

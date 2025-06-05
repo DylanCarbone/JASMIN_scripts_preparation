@@ -95,9 +95,9 @@ occti_run = function(species_i, region_i){
       fit_occ_formatted(
         spp = myspecies,
         obdata = data_region,
-        occformula = "~ North_s + I(North_s^2) + East_s + I(East_s^2)",
+        occformula = "~ northing_scaled + I(northing_scaled^2) + easting_scaled + I(easting_scaled^2)",
         detformula = "~ logLL + SEAS",
-        covnames = c("East_s", "North_s"),
+        covnames = c("northing_scaled", "easting_scaled"),
         minyear = year_range[1],
         maxyear = year_range[2],
         trendyears = year_range[1],
@@ -107,11 +107,20 @@ occti_run = function(species_i, region_i){
       silent = TRUE
     )
 
-    # Default status is "SUCCESS", but override if error
-    status <- if (inherits(occupancy_result, "try-error")) {
-      "failed"
+    # Check for error and extract message if needed
+    if (inherits(occupancy_result, "try-error")) {
+      status <- "failed"
+      
+      # Capture error message safely
+      error_message <- as.character(occupancy_result)
+
+      # Define path and save the error message
+      if (!dir.exists("error_messages")) dir.create("error_messages")
+      error_file <- paste0("error_messages/", myspecies, "_", myregion, "_nstart_", nstart_i, "_occti_error.txt")
+      writeLines(error_message, con = error_file)
+      
     } else {
-      "success"
+      status <- "success"
     }
 
     # If model ran successfully, generate plot and save

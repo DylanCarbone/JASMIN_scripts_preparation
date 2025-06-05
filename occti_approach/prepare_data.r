@@ -1,4 +1,4 @@
-#' Prepare Species Observation Data
+#' Prepare species Observation Data
 #'
 #' This function reads and preprocesses species observation data by renaming columns, formatting dates,
 #' converting grid references to monads, obtaining the grid region (England, Wales, Scotland, or Northern Ireland), converting to northing and easting, and computing list lengths

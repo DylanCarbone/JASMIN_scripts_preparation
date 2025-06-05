@@ -1,7 +1,7 @@
 #' Function to fit the occupancy models
 #'
 #'@param spp Target species to estimate occupancy for.
-#'@param obdata Data frame containing species occurrence records with the following columns: Species, Date, Gridref, Year, Week, Month, and optionally covnames (see below) and listL
+#'@param obdata Data frame containing species occurrence records with the following columns: species, Date, gridref, Year, Week, Month, and optionally covnames (see below) and listL
 #'@param occformula Formula for occupancy probability
 #'@param detformula Formula for detection probability
 #'@param covnames Vector of covariate names in obdata
@@ -39,7 +39,7 @@ fit_occ_formatted <- function(spp,
 
     # --- Initial setup ---
     # These variables are defined to avoid CRAN check notes for non-standard evaluation
-    Year <- Species <- Week <- N <- NULL
+    Year <- species <- Week <- N <- NULL
 
     # --- Set minimum and maximum year from data if not provided ---
     if (is.null(minyear)) {
@@ -57,7 +57,7 @@ fit_occ_formatted <- function(spp,
 
     # --- Create list of all sites (with spatial covariates) if not provided ---
     if (is.null(allsites)) {
-    allsites <- unique(obdata[, c("Gridref", covnames), with = FALSE])
+    allsites <- unique(obdata[, c("gridref", covnames), with = FALSE])
     }
 
     # Record start time for performance tracking
@@ -70,7 +70,7 @@ fit_occ_formatted <- function(spp,
     # --- Calculate seasonal detection probability by week for the species ---
     # Filter only rows for the target species
     obdata_sp <- obdata %>%
-    filter(Species == spp)
+    filter(species == spp)
 
     # Count number of observations per week
     pweek <- obdata_sp %>%
@@ -99,7 +99,7 @@ fit_occ_formatted <- function(spp,
 
     # --- Loop over years to fit model per year ---
     years <- obdata %>%
-    filter(Species == spp) %>%
+    filter(species == spp) %>%
     pull(Year) %>%
     unique() %>%
     sort()
@@ -125,14 +125,14 @@ fit_occ_formatted <- function(spp,
         filter(Year == kyear)
 
     # Skip loop iteration if there are no records for the species this year
-    if (nrow(filter(obdatak, Species == spp)) == 0) {
+    if (nrow(filter(obdatak, species == spp)) == 0) {
         message("no records for", kyear, "in species,", spp)
         next()
     }
 
     # --- Estimate active season based on observation months ---
     spp_months <- obdatak %>%
-        filter(Species == spp) %>%
+        filter(species == spp) %>%
         pull(Month)
 
     month1 <- if (is.null(qval)) {
@@ -157,41 +157,41 @@ fit_occ_formatted <- function(spp,
 
     # --- Set up binary occurrence column: 1 if species present, 0 otherwise ---
     obdatak <- obdatak %>%
-    mutate(Occ = if_else(Species == spp, 1, 0))
+    mutate(Occ = if_else(species == spp, 1, 0))
 
     # --- Collapse to site-date visits, preserving max occurrence and unique effort ---
     obdatak1 <- obdatak %>%
-    group_by(Date, Gridref, across(all_of(covnames)), Week, N) %>%
+    group_by(date, gridref, across(all_of(covnames)), Week, N) %>%
     summarise(
         Occ = max(Occ),
         listL = unique(listL),
         .groups = "drop"
     ) %>%
-    arrange(Gridref, desc(Occ))
+    arrange(gridref, desc(Occ))
 
     # --- Create site-by-visit matrices for occurrence, effort, and detection seasonality ---
     # These operations cannot be fully replaced by `dplyr`, so we retain base/paste + `plyr`
     obdatak1t <- do.call(
     plyr::rbind.fill.matrix,
-    plyr::dlply(obdatak1, "Gridref", function(a) { matrix(a$Occ, nrow = 1) })
+    plyr::dlply(obdatak1, "gridref", function(a) { matrix(a$Occ, nrow = 1) })
     )
 
     obdatak1tL <- do.call(
     plyr::rbind.fill.matrix,
-    plyr::dlply(obdatak1, "Gridref", function(a) { matrix(a$listL, nrow = 1) })
+    plyr::dlply(obdatak1, "gridref", function(a) { matrix(a$listL, nrow = 1) })
     )
 
     obdatak1tPw <- do.call(
     plyr::rbind.fill.matrix,
-    plyr::dlply(obdatak1, "Gridref", function(a) { matrix(a$N, nrow = 1) })
+    plyr::dlply(obdatak1, "gridref", function(a) { matrix(a$N, nrow = 1) })
     )
 
     # --- Extract spatial covariates per site ---
     obdatak1tEN <- obdatak1 %>%
-    select(Gridref, all_of(covnames)) %>%
+    select(gridref, all_of(covnames)) %>%
     distinct()
 
-    obdatak1tEN$Gridref <- as.factor(obdatak1tEN$Gridref)
+    obdatak1tEN$gridref <- as.factor(obdatak1tEN$gridref)
 
     # --- Limit maximum number of visits per site to 50 ---
     if (ncol(obdatak1t) > 50) {
@@ -346,8 +346,8 @@ fit_occ_formatted <- function(spp,
         psiA_SD = psi_sd,                    # Standard deviation of occupancy (linear scale)
         psiA_SDb = sqrt(psi_var_logit),      # Standard deviation (logit scale)
         AIC = occfit@AIC,
-        nRecords = nrow(subset(obdatak, Species == spp)),
-        nSquares = length(unique(subset(obdatak, Species == spp)$Gridref)),
+        nRecords = nrow(subset(obdatak, species == spp)),
+        nSquares = length(unique(subset(obdatak, species == spp)$gridref)),
         month_min = month1,
         month_max = month2,
         nstart = nstart,
@@ -384,7 +384,7 @@ fit_occ_formatted <- function(spp,
     
     # No previous output: start a fresh results list
     results <- list(
-        Species = spp,
+        species = spp,
         OccModel = occformula,
         DetModel = detformula,
         Index = z,
@@ -413,7 +413,7 @@ fit_occ_formatted <- function(spp,
     )
     
     results <- list(
-        Species = spp,
+        species = spp,
         OccModel = occformula,
         DetModel = detformula,
         Index = z,

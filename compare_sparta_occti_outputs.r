@@ -35,7 +35,7 @@ sp_output = readRDS(ants_occti_paths[path_i])
 
 occti_ants_outputs[[path_i]] = sp_output
 
-names(occti_ants_outputs)[path_i] <- sp_output$Species
+names(occti_ants_outputs)[path_i] <- sp_output$species
 
 }
 

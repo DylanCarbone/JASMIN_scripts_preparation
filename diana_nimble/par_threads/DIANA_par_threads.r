@@ -43,15 +43,15 @@ NIMBLE_run_parallel = function(species_i){
   print(myspecies)
   
   # Match visits and replace NA with 0
-  visit_df$Species <- ifelse(visit_df$visit %in% names(species_counts), species_counts[visit_df$visit], 0)
+  visit_df$species <- ifelse(visit_df$visit %in% names(species_counts), species_counts[visit_df$visit], 0)
 
-  nimbleData <- list(y = as.numeric(visit_df$Species))
+  nimbleData <- list(y = as.numeric(visit_df$species))
   
   #specify inits
   z_inits <- visit_df %>%
     group_by(siteIndex, yearIndex) %>%
-    summarise(Species = max(Species, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = yearIndex, values_from = Species, values_fill = 0) %>%
+    summarise(species = max(species, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = yearIndex, values_from = species, values_fill = 0) %>%
     select(-siteIndex) %>%
     as.matrix()
 

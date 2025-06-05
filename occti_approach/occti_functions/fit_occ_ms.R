@@ -2,7 +2,7 @@
 #'#' Function to fit the occupancy models
 #'
 #'@param splist Vector of target species to model
-#'@param obdata Data frame containing species occurrence records with the following columns: Species, Date, Gridref, Year, Week, Month, and optionally covnames (see below) and listL
+#'@param obdata Data frame containing species occurrence records with the following columns: species, Date, gridref, Year, Week, Month, and optionally covnames (see below) and listL
 #'@param occformula Formula for occupancy probability
 #'@param detformula Formula for detection probability
 #'@param covnames Vector of covariate names in obdata

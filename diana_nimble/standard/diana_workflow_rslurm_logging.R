@@ -34,7 +34,7 @@ setwd("dylcar_explore_occ_user")
 
 # Read and preprocess data
 data <- readRDS("formatted_butterfly_data.rds") %>% ### HERE
-  rename(Species = tik, SiteID = GRIDREF, Date = lower_date) %>%
+  rename(species = tik, SiteID = GRIDREF, Date = lower_date) %>%
   mutate(Date = as.Date(Date),
          yday = lubridate::yday(Date),
          Year = lubridate::year(Date))
@@ -54,25 +54,25 @@ data <- data %>% filter(SiteID %in% siteSummary$SiteID)
 
 # Summarise species
 speciesSummary <- data %>%
-  group_by(Species) %>%
+  group_by(species) %>%
   summarise(nuSiteID = length(unique(SiteID)),
-            nuRecs = length(Species)) %>%
+            nuRecs = length(species)) %>%
   arrange(desc(nuRecs))
 
 # Select species
-allSpecies <- sort(speciesSummary$Species[speciesSummary$nuRecs > min.Recs])
+allSpecies <- sort(speciesSummary$species[speciesSummary$nuRecs > min.Recs])
 
 # Prepare data
 data <- data %>%
   mutate(visit = paste(Date, SiteID, sep = "_"))
 
-species_counts <- split(data, data$Species) %>%
+species_counts <- split(data, data$species) %>%
   lapply(function(df){ table(df$visit)})
 
 visit_df <- data %>%
   group_by(visit, Year, SiteID) %>%
-  summarise(nuSpecies = length(unique(Species)),
-            nuRecords = length(Species)) %>%
+  summarise(nuSpecies = length(unique(species)),
+            nuRecords = length(species)) %>%
   ungroup()
 
 visit_df <- visit_df %>%
@@ -131,15 +131,15 @@ NIMBLE_run = function(species_i){
   single_species_counts = readRDS(file.path("species_data", paste0(myspecies, ".RDS")))
   
   # Match visits and replace NA with 0
-  visit_df$Species <- ifelse(visit_df$visit %in% names(single_species_counts), single_species_counts[visit_df$visit], 0)
+  visit_df$species <- ifelse(visit_df$visit %in% names(single_species_counts), single_species_counts[visit_df$visit], 0)
 
-  nimbleData <- list(y = as.numeric(visit_df$Species))
+  nimbleData <- list(y = as.numeric(visit_df$species))
 
   #specify inits
   z_inits <- visit_df %>%
   group_by(siteIndex, yearIndex) %>%
-  summarise(Species = max(Species, na.rm = TRUE), .groups = "drop") %>%
-  pivot_wider(names_from = yearIndex, values_from = Species, values_fill = 0) %>%
+  summarise(species = max(species, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = yearIndex, values_from = species, values_fill = 0) %>%
   select(-siteIndex) %>%
   as.matrix()
 

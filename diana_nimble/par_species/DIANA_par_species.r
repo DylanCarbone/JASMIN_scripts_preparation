@@ -86,11 +86,11 @@ NIMBLE_run_parallel = function(node_i){
 
         write(paste0("handling: ", core_species), file = species_log_file, append = TRUE)
 
-        visit_df$Species <- occMatrix[, core_species]
+        visit_df$species <- occMatrix[, core_species]
 
-        nimbleData <- list(y = as.numeric(visit_df$Species))
+        nimbleData <- list(y = as.numeric(visit_df$species))
   
-        z_inits <- reshape2::acast(visit_df, siteIndex ~ yearIndex, value.var="Species", fun = max)
+        z_inits <- reshape2::acast(visit_df, siteIndex ~ yearIndex, value.var="species", fun = max)
         z_inits[is.na(z_inits)] <- 0
         z_inits[!z_inits %in% c(0,1)]<- 0
         

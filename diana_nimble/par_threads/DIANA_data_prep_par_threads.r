@@ -28,7 +28,7 @@ setwd("dylcar_explore_occ_user")
 
 # Read and preprocess data
 data <- readRDS("monad_occupancy_dataset_ants.rds") %>% 
-  rename(Species = tik, SiteID = GRIDREF, Date = lower_date) %>%
+  rename(species = tik, SiteID = GRIDREF, Date = lower_date) %>%
   mutate(Date = as.Date(Date),
          yday = lubridate::yday(Date),
          Year = lubridate::year(Date))
@@ -48,25 +48,25 @@ data <- data %>% filter(SiteID %in% siteSummary$SiteID)
 
 # Summarize species
 speciesSummary <- data %>%
-  group_by(Species) %>%
+  group_by(species) %>%
   summarise(nuSiteID = length(unique(SiteID)),
-            nuRecs = length(Species)) %>%
+            nuRecs = length(species)) %>%
   arrange(desc(nuRecs))
 
 # Select species
-allSpecies <- sort(speciesSummary$Species[speciesSummary$nuRecs > min.Recs]) # 50
+allSpecies <- sort(speciesSummary$species[speciesSummary$nuRecs > min.Recs]) # 50
 
 # Prepare data
 data <- data %>%
   mutate(visit = paste(Date, SiteID, sep = "_"))
 
-species_counts <- split(data, data$Species) %>%
+species_counts <- split(data, data$species) %>%
   lapply(function(df){ table(df$visit)})
 
 visit_df <- data %>%
   group_by(visit, Year, SiteID) %>%
-  summarise(nuSpecies = length(unique(Species)),
-            nuRecords = length(Species)) %>%
+  summarise(nuSpecies = length(unique(species)),
+            nuRecords = length(species)) %>%
   ungroup()
 
 visit_df <- visit_df %>%
