@@ -6,9 +6,9 @@ add_dates <- function(obdata){
                   stop("lubridate package needed for the add_dates function to work. Please install it.",
                        call. = FALSE)
                 }
-            obdata$Date <- as.Date(obdata$Date)
-            obdata$Year <- lubridate::year(obdata$Date)
-            obdata$Month <- lubridate::month(obdata$Date)
-            obdata$Week <- lubridate::week(obdata$Date)
+            obdata$date <- as.Date(obdata$date)
+            obdata$Year <- lubridate::year(obdata$date)
+            obdata$Month <- lubridate::month(obdata$date)
+            obdata$Week <- lubridate::week(obdata$date)
             return(obdata)
 }
