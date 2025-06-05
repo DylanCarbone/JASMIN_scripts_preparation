@@ -159,7 +159,7 @@ dir.create(paste0("_rslurm_", jobname))
 params_df <- expand.grid(allSpecies, regions)
 
 # Rename columns (optional)
-names(params_df) <- c("species_i", "regions_i")
+names(params_df) <- c("species_i", "region_i")
 
 # Slurm job submission
 sjob <- slurm_apply(
