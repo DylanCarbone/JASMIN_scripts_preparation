@@ -145,7 +145,7 @@ occti_run = function(species_i, region_i){
       region = myregion,
       JASMIN = TRUE,
       queue = "long-serial",
-      n_nodes_requested = length(allSpecies),
+      n_nodes_requested = (length(allSpecies) * length(regions)),
       node_start_time = format(node_start_time, "%Y-%m-%d %H:%M:%S"),
       node_end_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
       node_run_time = as.numeric(difftime(Sys.time(), node_start_time, units = "hours")),
