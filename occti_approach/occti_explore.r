@@ -7,63 +7,39 @@ if(!require("BRCmap")){
 remotes::install_github("colinharrower/BRCmap")
 }
 
-library(parallel)
+# load occLite package, or use load_all() if you have a development version
+# if(!require("occLite")){
+# remotes::install_github("DylanCarbone/occLite")
+# }
+devtools::load_all("../occLite")
+
 library(rslurm)
-library(tidyverse)
 library(dplyr)
-
-library(data.table)
-library(unmarked)
-library(ggplot2)
-library(igr)
-
-source("occti_approach/prepare_data.r")
-
-for (file in list.files("occti_approach/occti_functions", full.names = TRUE)){
-source(file)
-}
 
 # Model parameters
 min.Recs <- 50 # 50 # number of records per species for inclusion
 nyr <- 2 # minimum number of years sampled
 nstart_vector <- 5 # Number of starting values
 
+# Butterflies group
 taxa_group = "Butterflies"
 
+# load butterfly data
 data = readRDS("formatted_butterfly_data.rds")
-monad_country_df = read.csv("UK_grid_refs_monads.csv")
-colnames(monad_country_df) = tolower(colnames(monad_country_df))
 
-# prepare_data is a wrapper function that removes invalid grid references, removes grid references above a 1 km monad resolution, coverts references below a 1km resolution to 1km, identifies country of the monad grid reference,
-data = prepare_data(data = data)
+# Prepare_data is a wrapper function that removes invalid grid references, removes grid references above a 1 km monad resolution, coverts references below a 1km resolution to 1km, identifies country of the monad grid reference,
+data = prep_occ_data(data = data, subset = TRUE, min.Recs = 10, nyr = 2)
 
-# Summarise species
-speciesSummary <- data %>%
-  group_by(species) %>%
-  summarise(nuSiteID = length(unique(gridref)),
-            nuRecs = length(species)) %>%
-  arrange(desc(nuRecs))
+# Obtain all species after subsetting
+allSpecies = unique(data$species)
 
-# Define species list
-allSpecies <- sort(speciesSummary$species[speciesSummary$nuRecs > min.Recs])
-
-# Subset by the number of visits to each site, removing sites that had data recorded for only 1 year
-sites_to_include = data %>% distinct(gridref, Year) %>% 
-  group_by(gridref) %>%
-  summarise(n_years_sampled = n()) %>%
-  filter(n_years_sampled >= nyr) %>%
-  pull(gridref)
-
-length(sites_to_include)
-length(unique(data$gridref))
-
-# Filter out sites that have not been sampled over enough years
-data = data %>% filter(gridref %in% sites_to_include)
-
+# Obtain all regions after subsetting
 regions = c(unique(data$region), "gb", "uk")
 
+# Prepare function to pass to each node
 occti_run = function(species, region){
   
+  # Record start time for later logging
   node_start_time = Sys.time()
 
   # Filtering for regions
@@ -75,14 +51,17 @@ occti_run = function(species, region){
     data_region = data %>% filter(region == region)
   }
 
+  # Obtain date range
   year_range = range(data_region$Year)
 
+  # Scale northing and easting
   data_region$northing_scaled <- as.numeric(scale(data_region$northing))
   data_region$easting_scaled  <- as.numeric(scale(data_region$easting))
 
+  # For each n_start value specified
   for (nstart_i in nstart_vector) {
 
-    # Run occupancy model
+    # Run occupancy model with occti
     occupancy_result <- try(
       fit_occ_formatted(
         spp = species,
@@ -123,9 +102,11 @@ occti_run = function(species, region){
         labs(x = "Year", y = "Occupancy Index") +
         theme_minimal()
 
+      # Save plots
       if (!dir.exists("plots")) dir.create("plots")
       ggsave(paste0("plots/", species, "_", region, "_nstart_", nstart_i, ".png"), plot = plot)
 
+      # Save Results
       if (!dir.exists("results")) dir.create("results")
       saveRDS(occupancy_result, paste0("results/", species, "_", region, "_nstart_", nstart_i, "_occupancy_output.rds"))
     }
@@ -146,6 +127,7 @@ occti_run = function(species, region){
       stringsAsFactors = FALSE
     )
 
+    # Save log entry
     if (!dir.exists("logs")) dir.create("logs")
     write.csv(log_entry, paste0("logs/", species, "_", region, "_nstart_", nstart_i, "_log.csv"), row.names = FALSE)
 
@@ -169,6 +151,9 @@ params_df <- params_df %>%
   semi_join(distinct(data, species, region), by = c("species", "region")) %>%
   rbind(gb_uk_df)
 
+# NB: occLite needs to be installed locally to allow for the nodes to access functions.
+# Likewise, the nodes will access the functions as they are in the installed version, not in the state they are in after you called load_all()
+
 # Slurm job submission
 sjob <- slurm_apply(
   f = occti_run,
@@ -177,10 +162,7 @@ sjob <- slurm_apply(
   nodes = nrow(params_df),
   cpus_per_node = 1,
   submit = TRUE,
-  global_objects = c("allSpecies", "regions", "data", "fit_occ_formatted", "fit_trend", "expit", "pcfunc", "pcfunc2", "sigfunc", "taxa_group", "nstart_vector"),
+  global_objects = c("allSpecies", "regions", "data", "taxa_group", "nstart_vector"),
   slurm_options = list(time = "24:00:00", mem = 30000, error = "%a.err",
   account = "ceh_generic", partition = "standard", qos = "long")
 )
-
-#SBATCH --account=mygws
-#SBATCH --partition=debug
