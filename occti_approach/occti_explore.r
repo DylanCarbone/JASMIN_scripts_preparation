@@ -11,16 +11,12 @@ library(parallel)
 library(rslurm)
 library(tidyverse)
 library(dplyr)
-library(rnrfa)
 
 library(data.table)
 library(unmarked)
 library(ggplot2)
 library(igr)
 library(BRCmap)
-
-# Set working directory
-setwd("dylcar_explore_occ_user")
 
 source("occti_approach/prepare_data.r")
 
@@ -161,7 +157,7 @@ occti_run = function(species_i, region_i){
 }
 
 # Generate the job name with the current date
-jobname <- paste0('dylcar_explore_occ_run_OCCTI_', toupper(taxa_group), "_", format(Sys.Date(), "%d_%m_%Y"))
+jobname <- paste0('explore_occ_run_OCCTI_', toupper(taxa_group), "_", format(Sys.Date(), "%d_%m_%Y"))
 dir.create(paste0("_rslurm_", jobname))
 
 # Create a dataframe with every combination of region and species for the parameters
