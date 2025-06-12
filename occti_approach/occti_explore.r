@@ -16,7 +16,6 @@ library(data.table)
 library(unmarked)
 library(ggplot2)
 library(igr)
-library(BRCmap)
 
 source("occti_approach/prepare_data.r")
 
@@ -61,22 +60,19 @@ length(unique(data$gridref))
 # Filter out sites that have not been sampled over enough years
 data = data %>% filter(gridref %in% sites_to_include)
 
-regions = c(unique(data$region), "uk")
+regions = c(unique(data$region), "gb", "uk")
 
-occti_run = function(species_i, region_i){
+occti_run = function(species, region){
   
   node_start_time = Sys.time()
 
-  myspecies <- allSpecies[species_i]
-  print(myspecies)
-
-  myregion = regions[region_i]
-  print(myregion)
-
-  if (myregion != "uk") {
-    data_region = data %>% filter(region == myregion)
-  } else {
+  # Filtering for regions
+  if (region == "uk"){
     data_region = data
+  } else if (region == "gb"){
+    data_region = data %>% filter(region != "ir")
+  } else {
+    data_region = data %>% filter(region == region)
   }
 
   year_range = range(data_region$Year)
@@ -89,7 +85,7 @@ occti_run = function(species_i, region_i){
     # Run occupancy model
     occupancy_result <- try(
       fit_occ_formatted(
-        spp = myspecies,
+        spp = species,
         obdata = data_region,
         occformula = "~ northing_scaled + I(northing_scaled^2) + easting_scaled + I(easting_scaled^2)",
         detformula = "~ logLL + SEAS",
@@ -112,7 +108,7 @@ occti_run = function(species_i, region_i){
 
       # Define path and save the error message
       if (!dir.exists("error_messages")) dir.create("error_messages")
-      error_file <- paste0("error_messages/", myspecies, "_", myregion, "_nstart_", nstart_i, "_occti_error.txt")
+      error_file <- paste0("error_messages/", species, "_", region, "_nstart_", nstart_i, "_occti_error.txt")
       writeLines(error_message, con = error_file)
       
     } else {
@@ -128,17 +124,17 @@ occti_run = function(species_i, region_i){
         theme_minimal()
 
       if (!dir.exists("plots")) dir.create("plots")
-      ggsave(paste0("plots/", myspecies, "_", myregion, "_nstart_", nstart_i, ".png"), plot = plot)
+      ggsave(paste0("plots/", species, "_", region, "_nstart_", nstart_i, ".png"), plot = plot)
 
       if (!dir.exists("results")) dir.create("results")
-      saveRDS(occupancy_result, paste0("results/", myspecies, "_", myregion, "_nstart_", nstart_i, "_occupancy_output.rds"))
+      saveRDS(occupancy_result, paste0("results/", species, "_", region, "_nstart_", nstart_i, "_occupancy_output.rds"))
     }
 
     # log run attributes
     log_entry <- data.frame(
       taxa_group = taxa_group,
-      species_name = myspecies,
-      region = myregion,
+      species_name = species,
+      region = region,
       JASMIN = TRUE,
       queue = "long-serial",
       n_nodes_requested = (length(allSpecies) * length(regions)),
@@ -151,7 +147,7 @@ occti_run = function(species_i, region_i){
     )
 
     if (!dir.exists("logs")) dir.create("logs")
-    write.csv(log_entry, paste0("logs/", myspecies, "_", myregion, "_nstart_", nstart_i, "_log.csv"), row.names = FALSE)
+    write.csv(log_entry, paste0("logs/", species, "_", region, "_nstart_", nstart_i, "_log.csv"), row.names = FALSE)
 
   }
 }
@@ -161,10 +157,17 @@ jobname <- paste0('explore_occ_run_OCCTI_', toupper(taxa_group), "_", format(Sys
 dir.create(paste0("_rslurm_", jobname))
 
 # Create a dataframe with every combination of region and species for the parameters
-params_df <- expand.grid(allSpecies, regions)
+params_df <- expand.grid(allSpecies, unique(data$region))
+gb_uk_df <- expand.grid(allSpecies, c("gb", "uk"))
 
 # Rename columns (optional)
-names(params_df) <- c("species_i", "region_i")
+names(params_df) <- c("species", "region")
+names(gb_uk_df) <- c("species", "region")
+
+# Keep only species-region combinations in params_df that are present in data
+params_df <- params_df %>%
+  semi_join(distinct(data, species, region), by = c("species", "region")) %>%
+  rbind(gb_uk_df)
 
 # Slurm job submission
 sjob <- slurm_apply(
@@ -176,7 +179,7 @@ sjob <- slurm_apply(
   submit = TRUE,
   global_objects = c("allSpecies", "regions", "data", "fit_occ_formatted", "fit_trend", "expit", "pcfunc", "pcfunc2", "sigfunc", "taxa_group", "nstart_vector"),
   slurm_options = list(time = "24:00:00", mem = 30000, error = "%a.err",
-  account = "ceh_generic", partition = "standard", qos = "long") ### HERE
+  account = "ceh_generic", partition = "standard", qos = "long")
 )
 
 #SBATCH --account=mygws
