@@ -1,37 +1,9 @@
 .RData
 .Rhistory
-.sh_history
-.sudo_as_admin_successful
-ants_visit_data.rds
-calculate_run_time.r
-daisy_chain_functions.R
-monad_occupancy_dataset_ants.rds
-NIMBLE error.r
-transferable_outputs.rds
-UK_grid_refs_monads.csv
-.local/
-shared files by gary and kath
-old
-*.rds
-Other
-occNimble
-.Rproj.user
-execution_time.txt
-JAGS runtime log on JASMIN with a maximum of 7 nodes.csv
-diana_nimble/butterfly_data/BNM_formattedOccData_2022.rdata
-diana_nimble/butterfly_data/BNM_2022.rdata
-ant_and_bee_logs.csv
-butterfly_data/BNM_2022.rdata
-butterfly_data/BNM_formattedOccData_2022.rdata
-diana_nimble/past_JASMIN_runs
-*model_fitting_log.txt
-past_JASMIN_runs
-run_logs.csv
-plots
-troubleshooting.r
-occ_comparison/_rslurm_dylcar_explore_occ_run_DIANA_NIMBLE_ANTS_24_01_2025
-occ_comparison/_rslurm_dylcar_explore_occ_run_OCCTI_ANTS_03_04_2025
-occ_comparison/ants_occ_outputs
-occupancy_comparison_plots/
-logs/
-occ_comparison
+.config
+OLD
+approach_comparisons
+past_jasmin_datalabs_runs
+formatted_butterfly_data.rds
+monad_occupancy_dataset_bees.rds
+occupancy_results.rds
