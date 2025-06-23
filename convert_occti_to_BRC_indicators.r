@@ -14,13 +14,14 @@ loess_results <- smooth_occti_outputs(
   save_plots = TRUE,
   span = 0.75,
   plot_width = 18,
-  plot_height = 6
+  plot_height = 6,
+  n_iter = 1000
 )
 
 # Note that values have been logit transformed.
 bma_df = convert_for_bma(loess_results)
 
-bma_indicator = bma(bma_df, parallel = TRUE, m.scale = "loge")
+bma_indicator = bma(bma_df, parallel = TRUE, m.scale = "logit")
 
 plot_indicator(indicator = bma_indicator[,'Index.M'],
                CIs = bma_indicator[,c(3,4)])

@@ -7,11 +7,12 @@ if(!require("BRCmap")){
 remotes::install_github("colinharrower/BRCmap")
 }
 
-# load occLite package, or use load_all() if you have a development version
-# if(!require("occLite")){
-# remotes::install_github("DylanCarbone/occLite")
-# }
-devtools::load_all("../occLite")
+load occLite package, or use load_all() if you have a development version
+if(!require("occLite")){
+remotes::install_github("DylanCarbone/occLite")
+}
+
+# devtools::load_all("../occLite")
 
 library(rslurm)
 library(dplyr)

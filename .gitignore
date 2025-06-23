@@ -7,3 +7,5 @@ past_jasmin_datalabs_runs
 formatted_butterfly_data.rds
 monad_occupancy_dataset_bees.rds
 occupancy_results.rds
+occti_plots
+occupancy_comparison_plots
