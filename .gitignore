@@ -9,3 +9,4 @@ monad_occupancy_dataset_bees.rds
 occupancy_results.rds
 occti_plots
 occupancy_comparison_plots
+ants_loess_smoothing.rds

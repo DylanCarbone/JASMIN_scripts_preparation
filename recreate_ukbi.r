@@ -4,7 +4,7 @@ library(BRCindicators)
 
 load_all("../occLite")
 
-# Load all OCCTI model outputs
+# Load all occti model outputs
 occti_ants_outputs <- load_occti_outputs("past_jasmin_datalabs_runs/_rslurm_dylcar_explore_occ_run_OCCTI_ANTS_01_05_2025/results")
 
 # Generate plots and return smoothed LOESS summaries
@@ -18,10 +18,10 @@ loess_results <- smooth_occti_outputs(
   n_iter = 1000
 )
 
-# Note that values have been logit transformed.
-bma_df = convert_for_bma(loess_results)
+# To-do: rename columns in smooth_occti_outputs
+colnames(loess_results$loess_predictions) = tolower(colnames(loess_results$loess_predictions))
 
-bma_indicator = bma(bma_df, parallel = TRUE, m.scale = "logit")
+indicator = calculate_indicator(loess_results$loess_predictions, method = "lambda", bma_ind = "prime")
 
-plot_indicator(indicator = bma_indicator[,'Index.M'],
-               CIs = bma_indicator[,c(3,4)])
+
+
