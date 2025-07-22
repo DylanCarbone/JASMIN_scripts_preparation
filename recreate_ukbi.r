@@ -18,10 +18,4 @@ loess_results <- smooth_occti_outputs(
   n_iter = 1000
 )
 
-# To-do: rename columns in smooth_occti_outputs
-colnames(loess_results$loess_predictions) = tolower(colnames(loess_results$loess_predictions))
-
 indicator = calculate_indicator(loess_results$loess_predictions, method = "lambda", bma_ind = "prime")
-
-
-

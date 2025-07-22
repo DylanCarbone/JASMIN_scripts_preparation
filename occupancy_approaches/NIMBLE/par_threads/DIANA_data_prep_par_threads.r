@@ -1,6 +1,5 @@
 # Load necessary modules
-module load jaspy  # For loading Python workspace ??
-module load jasr    # For loading R workspace ??
+module load jasr    # Load R workspace
 
 R
 
@@ -116,18 +115,10 @@ mynimbleCode <- nimbleCode({
 })
 
 # Generate the job name with the current date
-jobname <- paste0('dylcar_explore_occ_run_DIANA_NIMBLE_BUTTERFLIES_par_threads', "_", format(Sys.Date(), "%d_%m_%Y"))
+jobname <- paste0('dylcar_explore_occ_run_DIANA_NIMBLE_ants_par_threads', "_", format(Sys.Date(), "%d_%m_%Y"))
 jobname_full <- paste0("_rslurm_", jobname)
 
 dir.create(jobname_full)
-
-# Save each of the species counts as a seperate dataframe
-for (species in names(species_counts)){
-
-  dir.create(file.path(jobname_full, "species_data"), showWarnings = FALSE)
-
-  saveRDS(species_counts[[species]], file.path(jobname_full, "species_data", paste0(species, ".RDS")))
-}
 
 saveRDS(species_counts, file.path(jobname_full, "species_counts.RDS"))
 saveRDS(allSpecies, file.path(jobname_full, "allSpecies.RDS"))
@@ -146,3 +137,6 @@ paste0("0-", length(allSpecies)-1)
 
 # cpus-per-task
 n.chains + 1
+
+# [1] "0-38"
+# [1] 4

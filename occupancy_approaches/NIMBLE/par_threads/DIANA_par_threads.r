@@ -72,6 +72,7 @@ NIMBLE_run_parallel = function(species_i){
   write("Model initialized", file = log_file, append = TRUE)
 
   CmyModel <- compileNimble(myModel)
+  # printErrors()
 
   write("Model compiled", file = log_file, append = TRUE)
 

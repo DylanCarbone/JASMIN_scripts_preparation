@@ -61,15 +61,15 @@ slurm_occDetFunc <- function(species_i){
                       burnin = 30000,
                       thinning = 6,
                       nyr = 2,
-                      modeltype = 'sparta',
-                      #regional_codes = reg_data,
-                      #region_aggs = region_aggs,
+                      modeltype = c('ranwalk', 'halfcauchy', 'catlistlength'),
+                      # regional_codes = reg_data,
+                      # region_aggs = region_aggs,
                       return_data = FALSE,
                       seed = 123,
-                      additional.parameters = "a",
+                      # additional.parameters = "a", # not sure if this is needed any more for runtime logging
                       allowSitesMultiRegions = TRUE,
                       rem_aggs_with_missing_regions=FALSE,
-                      provenance = "test")
+                      provenance = "This is used for model run time logging. Please disregard the results.")
 
         # Extract trend data for a species
     plot = plot(out)

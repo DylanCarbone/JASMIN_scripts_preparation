@@ -10,3 +10,5 @@ occupancy_results.rds
 occti_plots
 occupancy_comparison_plots
 ants_loess_smoothing.rds
+occti_plots_butterflies
+occti_plots_ants
