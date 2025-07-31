@@ -13,3 +13,4 @@ occti_plots_butterflies
 occti_plots_ants
 sparta_posterior_samples
 occupancy_approaches/sparta/UK_grid_refs_monads.csv
+_rlsurm_*

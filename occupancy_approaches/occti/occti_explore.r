@@ -4,7 +4,7 @@ module load jasr
 R
 
 # load occLite package, or use load_all() if you have a development version
-# NB: it is recommended that you clean install occLite if you have not used it for some time, as it is currently in development. The installation of dependancies can take some time. To save time, you can select the option to ignore re-installing dependancies
+# NB: it is recommended that you clean install occLite if you have not used it for some time, as it is currently in development. The installation of dependancies can take some time. However, next time you install the package, it should be shorter as it should detect that the dependancies already are installed
 remotes::install_github("DylanCarbone/occLite")
 
 # If you have cloned occLite and are testing changes to functions
@@ -13,6 +13,9 @@ remotes::install_github("DylanCarbone/occLite")
 library(occLite)
 library(rslurm)
 library(dplyr)
+
+# Set the working directory if you have not already
+setwd("JASMIN_scripts_preparation")
 
 # Model parameters
 min.Recs <- 50 # 50 # number of records per species for inclusion
@@ -25,7 +28,7 @@ taxa_group = "Hoverflies"
 # load butterfly data
 data = read.csv("occurence_datasets/hoverfly_2025_cleaned_data_for_occti.csv")
 
-# Formatting for butterfly dataset only
+# Formatting required for butterfly dataset only
 # data = data %>%
 # rename(date = lower_date, gridref = GRIDREF, species = tik) %>%
 # select(-TO_ENDDATE, -YEAR)
