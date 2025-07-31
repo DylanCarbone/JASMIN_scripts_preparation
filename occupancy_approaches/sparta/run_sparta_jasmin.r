@@ -22,7 +22,7 @@ require(ggplot2)
 # Load data --------------------------------------------------------------------
 
 # species occurrence records - essentially a list of species / date / 1km grids
-visitData <- readRDS(file = "monad_occupancy_dataset_ants.rds")
+visitData <- readRDS(file = "occurence_datasets/monad_occupancy_dataset_ants.rds")
 
 taxa_group = "Ants"
 
@@ -30,7 +30,7 @@ taxa_group = "Ants"
 
 #sometimes we run model that include a factor for region/country
 # load region data
-reg_data <- read.csv("UK_grid_refs_monads.csv", stringsAsFactors = FALSE) # From the folder I have saved the GB_grid_refs.csv file in the MobaXterm session folders
+reg_data <- read.csv("occupancy_approaches/sparta/UK_grid_refs_monads.csv", stringsAsFactors = FALSE) # From the folder I have saved the GB_grid_refs.csv file in the MobaXterm session folders
 reg_data <- reg_data[,1:5]
 names(reg_data)[1] <- "site"
 region_aggs <- list(GB = c('ENGLAND','WALES','SCOTLAND'), UK = c('ENGLAND','WALES','SCOTLAND','NORTHERN_IRELAND'))

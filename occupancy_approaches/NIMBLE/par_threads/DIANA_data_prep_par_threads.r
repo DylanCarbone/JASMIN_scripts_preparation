@@ -26,7 +26,7 @@ sample_records = NULL
 setwd("dylcar_explore_occ_user")
 
 # Read and preprocess data
-data <- readRDS("monad_occupancy_dataset_ants.rds") %>% 
+data <- readRDS("occurence_datasets/monad_occupancy_dataset_ants.rds") %>% 
   rename(species = tik, SiteID = GRIDREF, Date = lower_date) %>%
   mutate(Date = as.Date(Date),
          yday = lubridate::yday(Date),

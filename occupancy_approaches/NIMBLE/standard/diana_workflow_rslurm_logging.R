@@ -30,10 +30,10 @@ setwd("dylcar_explore_occ_user")
 # butterfly_data = taxa_data %>%
 # rename(tik = CONCEPT, lower_date = TO_STARTDATE, GRIDREF = TO_GRIDREF)
 
-# saveRDS(butterfly_data, "formatted_butterfly_data.rds")  
+# saveRDS(butterfly_data, "occurence_datasets/formatted_butterfly_data.rds")  
 
 # Read and preprocess data
-data <- readRDS("formatted_butterfly_data.rds") %>% ### HERE
+data <- readRDS("occurence_datasets/formatted_butterfly_data.rds") %>% ### HERE
   rename(species = tik, SiteID = GRIDREF, Date = lower_date) %>%
   mutate(Date = as.Date(Date),
          yday = lubridate::yday(Date),

@@ -3,7 +3,7 @@
 .config
 OLD
 past_jasmin_datalabs_runs
-formatted_butterfly_data.rds
+occurence_datasets
 monad_occupancy_dataset_bees.rds
 occupancy_results.rds
 occti_plots
@@ -12,3 +12,4 @@ ants_loess_smoothing.rds
 occti_plots_butterflies
 occti_plots_ants
 sparta_posterior_samples
+occupancy_approaches/sparta/UK_grid_refs_monads.csv

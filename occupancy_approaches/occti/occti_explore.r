@@ -4,9 +4,11 @@ module load jasr
 R
 
 # load occLite package, or use load_all() if you have a development version
-if(!require("occLite")){
+# NB: it is recommended that you clean install occLite if you have not used it for some time, as it is currently in development. The installation of dependancies can take some time. To save time, you can select the option to ignore re-installing dependancies
 remotes::install_github("DylanCarbone/occLite")
-}
+
+# If you have cloned occLite and are testing changes to functions
+# devtools::load_all("../occLite")
 
 library(occLite)
 library(rslurm)
@@ -18,10 +20,15 @@ nyr <- 2 # minimum number of years sampled
 nstart_vector <- 5 # Number of starting values
 
 # Butterflies group
-taxa_group = "Butterflies"
+taxa_group = "Hoverflies"
 
 # load butterfly data
-data = readRDS("formatted_butterfly_data.rds")
+data = read.csv("occurence_datasets/hoverfly_2025_cleaned_data_for_occti.csv")
+
+# Formatting for butterfly dataset only
+# data = data %>%
+# rename(date = lower_date, gridref = GRIDREF, species = tik) %>%
+# select(-TO_ENDDATE, -YEAR)
 
 # Prepare_data is a wrapper function that removes invalid grid references, removes grid references above a 1 km monad resolution, coverts references below a 1km resolution to 1km, identifies country of the monad grid reference,
 data = prep_occ_data(data = data, subset = TRUE, min.Recs = 10, nyr = 2)
@@ -147,8 +154,7 @@ params_df <- params_df %>%
   semi_join(distinct(data, species, region), by = c("species", "region")) %>%
   rbind(gb_uk_df)
 
-# NB: occLite needs to be installed locally to allow for the nodes to access functions.
-# Likewise, the nodes will access the functions as they are in the installed version, not in the state they are in after you called load_all()
+# NB: occLite needs to be installed locally with install_github to allow for the nodes to access functions. Nodes will access the functions as they are in the installed version, not in the state they are in after you called load_all()
 
 # Slurm job submission
 sjob <- slurm_apply(
