@@ -13,6 +13,7 @@ remotes::install_github("DylanCarbone/occLite")
 library(occLite)
 library(rslurm)
 library(dplyr)
+library(ggplot2)
 
 # Set the working directory if you have not already
 setwd("JASMIN_scripts_preparation")
@@ -22,10 +23,10 @@ min.Recs <- 50 # 50 # number of records per species for inclusion
 nyr <- 2 # minimum number of years sampled
 nstart_vector <- 5 # Number of starting values
 
-# Butterflies group
+# specify group
 taxa_group = "Hoverflies"
 
-# load butterfly data
+# load data
 data = read.csv("occurence_datasets/hoverfly_2025_cleaned_data_for_occti.csv")
 
 # Formatting required for butterfly dataset only
