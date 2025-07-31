@@ -2,7 +2,6 @@
 .Rhistory
 .config
 OLD
-approach_comparisons
 past_jasmin_datalabs_runs
 formatted_butterfly_data.rds
 monad_occupancy_dataset_bees.rds
@@ -12,3 +11,4 @@ occupancy_comparison_plots
 ants_loess_smoothing.rds
 occti_plots_butterflies
 occti_plots_ants
+sparta_posterior_samples

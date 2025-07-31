@@ -19,3 +19,4 @@ loess_results <- smooth_occti_outputs(
 )
 
 indicator = calculate_indicator(loess_results$loess_predictions, method = "lambda", bma_ind = "prime")
+
