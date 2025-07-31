@@ -8,8 +8,7 @@ if(!require("occLite")){
 remotes::install_github("DylanCarbone/occLite")
 }
 
-devtools::load_all("../occLite")
-
+library(occLite)
 library(rslurm)
 library(dplyr)
 
