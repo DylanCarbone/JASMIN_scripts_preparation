@@ -53,7 +53,7 @@ occti_run = function(species, region){
   if (region == "uk"){
     data_region = data
   } else if (region == "gb"){
-    data_region = data %>% filter(region != "ir")
+    data_region = data %>% filter(region != "ni")
   } else {
     data_region = data %>% filter(region == region)
   }

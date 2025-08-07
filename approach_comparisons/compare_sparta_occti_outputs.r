@@ -8,7 +8,7 @@ library(gtools)
 
 ants_sparta_paths_RW = list.files("past_jasmin_datalabs_runs/datalabs_ants_sparta_RW", pattern = "*.rdata", full.names = TRUE)
 ants_sparta_paths = list.files("past_jasmin_datalabs_runs/_rslurm_dylcar_explore_occ_run_SPARTA_ANTS_NO_RW_21_05_2025", pattern = "*.rdata", full.names = TRUE)
-ants_occti_paths = list.files("past_jasmin_datalabs_runs/_rslurm_dylcar_explore_occ_run_OCCTI_ANTS_01_05_2025/results", pattern = "*nstart_5_occupancy_output.rds", full.names = TRUE)
+ants_occti_paths = list.files("past_jasmin_datalabs_runs/_rslurm_dylcar_explore_occ_run_OCCTI_ANTS_17_04_2025/results", pattern = "*nstart_5_occupancy_output.rds", full.names = TRUE)
 
 sparta_ants_outputs_RW = list()
 
@@ -71,11 +71,7 @@ dir.create("occupancy_comparison_plots")
 
 bound_occ = function(num){
 
-  num = ifelse(num == 1, 1-1e-6, ifelse(num == 0, 1e-6, num))
-  
-  if(any(num > 1 | num < 0)){
-    stop("Values are greater than 1 or less than 0")
-  }
+  num = ifelse(num >= 1, 1-1e-6, ifelse(num <= 0, 1e-6, num))
 
   return(num)
 }
@@ -108,15 +104,20 @@ for (species in species_intersect) {
       Iteration = 1:n_iter,
       Simulated_psiA = rnorm(n_iter, mean = mean_val, sd = sd_val)
     )
-  }))
+  })) %>%
+  filter(Simulated_psiA < 1, Simulated_psiA > 0)
+
+  years_range = range(occ_data$Year)
+  years = years_range[1]:years_range[2]
 
   loess_predictions <- psiA_draws %>%
   group_by(Iteration) %>%
   do({
-    mod <- try(loess(Simulated_psiA ~ Year, data = ., span = 0.50), silent = TRUE)
-    data.frame(Year = .$Year, Pred = predict(mod, newdata = data.frame(Year = .$Year)))
+    mod <- loess(Simulated_psiA ~ Year, data = ., span = 0.75)
+    data.frame(Year = years, Pred = predict(mod, newdata = data.frame(Year = years)))
   }) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(Pred = bound_occ(Pred))
 
   loess_summary <- loess_predictions %>%
   group_by(Year) %>%
@@ -127,34 +128,7 @@ for (species in species_intersect) {
   )
 
   # Plot
-  occti_plot_1 <- ggplot(occ_data, aes(x = Year)) + 
-    geom_line(aes(y = psiA), colour = "blue", alpha = 0.25) +
-    geom_ribbon(aes(ymin = psiA_L, ymax = psiA_U), fill = "blue", alpha = 0.15) +
-    geom_line(data = loess_summary, aes(y = psiA_loess_mean), colour = "darkred", size = 1.2) +
-    geom_ribbon(data = loess_summary, aes(ymin = psiA_loess_lower, ymax = psiA_loess_upper), fill = "red", alpha = 0.15) +
-    labs(x = "Year", y = "Occupancy Index") +
-    theme_minimal() +
-    ggtitle(paste(species, "- occti with span = 0.50")) +
-    ylim(0,1)
-
-  loess_predictions <- psiA_draws %>%
-  group_by(Iteration) %>%
-  do({
-    mod <- try(loess(Simulated_psiA ~ Year, data = ., span = 0.75), silent = TRUE)
-    data.frame(Year = .$Year, Pred = predict(mod, newdata = data.frame(Year = .$Year)))
-  }) %>%
-  ungroup()
-
-  loess_summary <- loess_predictions %>%
-  group_by(Year) %>%
-  summarise(
-    psiA_loess_mean = mean(Pred, na.rm = TRUE),
-    psiA_loess_lower = quantile(Pred, 0.025, na.rm = TRUE),
-    psiA_loess_upper = quantile(Pred, 0.975, na.rm = TRUE)
-  )
-
-  # Plot
-  occti_plot_2 <- ggplot(occ_data, aes(x = Year)) + 
+  occti_plot <- ggplot(occ_data, aes(x = Year)) + 
     geom_line(aes(y = psiA), colour = "blue", alpha = 0.25) +
     geom_ribbon(aes(ymin = psiA_L, ymax = psiA_U), fill = "blue", alpha = 0.15) +
     geom_line(data = loess_summary, aes(y = psiA_loess_mean), colour = "darkred", size = 1.2) +
@@ -164,190 +138,8 @@ for (species in species_intersect) {
     ggtitle(paste(species, "- occti with span = 0.75")) +
     ylim(0,1)
 
-# # Simulate from log-transformed occupancy index
-# psiA_draws <- do.call(rbind, lapply(1:nrow(occ_data), function(i) {
-#   year <- occ_data$Year[i]
-#   mean_val <- occ_data$psiA[i]
-#   sd_val <- (occ_data$psiA_U[i] - occ_data$psiA_L[i]) / (2 * 1.96)
-
-#   sim_vals <- rnorm(n_iter, mean = mean_val, sd = sd_val)
-#   sim_vals <- ifelse(sim_vals > 0, sim_vals, 1e-6)
-#   sim_vals <- ifelse(sim_vals > 1, 1, sim_vals)
-#   sim_vals <- log(sim_vals)
-
-#   data.frame(
-#     Year = year,
-#     Iteration = 1:n_iter,
-#     Simulated_psiA = sim_vals
-#   )
-# }))
-
-# # Apply LOESS smoothing to each iteration
-# loess_predictions <- psiA_draws %>%
-#   group_by(Iteration) %>%
-#   do({
-#     mod <- try(loess(Simulated_psiA ~ Year, data = ., span = 0.75), silent = TRUE)
-#     if (inherits(mod, "try-error")) {
-#       return(data.frame(Year = .$Year, Pred = NA))
-#     }
-#     data.frame(Year = .$Year, Pred = predict(mod, newdata = data.frame(Year = .$Year)))
-#   }) %>%
-#   ungroup()
-
-# # Summarise across iterations using quantiles
-# loess_summary <- loess_predictions %>%
-#   group_by(Year) %>%
-#   summarise(
-#     psiA_loess_mean = mean(Pred, na.rm = TRUE),
-#     psiA_loess_lower = quantile(Pred, 0.025, na.rm = TRUE),
-#     psiA_loess_upper = quantile(Pred, 0.975, na.rm = TRUE)
-#   )
-
-# occti_plot_log <- ggplot() +
-#   # Raw log-transformed occupancy index
-#   geom_line(data = occ_data, aes(x = Year, y = log(psiA)), colour = "blue", alpha = 0.25) +
-#   geom_ribbon(data = occ_data, aes(x = Year, ymin = log(psiA_L), ymax = log(psiA_U)), fill = "blue", alpha = 0.15) +
-
-#   # LOESS smoothed curve and 95% interval from draws
-#   geom_line(data = loess_summary, aes(x = Year, y = psiA_loess_mean), colour = "darkred", size = 1.2) +
-#   geom_ribbon(data = loess_summary, aes(x = Year, ymin = psiA_loess_lower, ymax = psiA_loess_upper), fill = "red", alpha = 0.15) +
-
-#   labs(x = "Year", y = "log(Occupancy Index)") +
-#   theme_minimal() +
-#   ggtitle(paste(species, "- log-transformed occupancy with 95% percentile"))
-
-# # Guard functions
-# safe_exp <- function(x) pmin(pmax(exp(x), 0), 1)  # Avoid values > 1 if smoothing overshoots
-
-# # Summarise and back-transform
-# loess_summary <- loess_predictions %>%
-#   group_by(Year) %>%
-#   summarise(
-#     psiA_loess_mean = safe_exp(mean(Pred, na.rm = TRUE)),
-#     psiA_loess_lower = safe_exp(quantile(Pred, 0.025, na.rm = TRUE)),
-#     psiA_loess_upper = safe_exp(quantile(Pred, 0.975, na.rm = TRUE))
-#   )
-
-# # Plot on original [0, 1] scale (back-transformed)
-# occti_plot_log_backtransformed <- ggplot() +
-#   # Raw occupancy values
-#   geom_line(data = occ_data, aes(x = Year, y = psiA), colour = "blue", alpha = 0.25) +
-#   geom_ribbon(data = occ_data, aes(x = Year, ymin = psiA_L, ymax = psiA_U), fill = "blue", alpha = 0.15) +
-
-#   # Smoothed mean and quantiles from log-scale back-transformed
-#   geom_line(data = loess_summary, aes(x = Year, y = psiA_loess_mean), colour = "darkred", size = 1.2) +
-#   geom_ribbon(data = loess_summary, aes(x = Year, ymin = psiA_loess_lower, ymax = psiA_loess_upper), fill = "red", alpha = 0.15) +
-
-#   labs(x = "Year", y = "Occupancy Index") +
-#   theme_minimal() +
-#   ggtitle(paste(species, "- occupancy with 95% quantile (log back-transformed)")) +
-#   ylim(0,1)
-
-occ_data_logit = occ_data %>%
-mutate(psiA = logit(bound_occ(psiA)),
-psiA_L = logit(bound_occ(psiA_L)), 
-psiA_U = logit(bound_occ(psiA_U)))
-
-# Simulate from log-transformed occupancy index
-psiA_draws <- do.call(rbind, lapply(1:nrow(occ_data_logit), function(i) {
-  year <- occ_data_logit$Year[i]
-  mean_val <- (occ_data_logit$psiA[i])
-  sd_val <- (occ_data_logit$psiA_U[i] - occ_data_logit$psiA_L[i]) / (2 * 1.96)
-
-  sim_vals <- rnorm(n_iter, mean = mean_val, sd = sd_val)
-
-  data.frame(
-    Year = year,
-    Iteration = 1:n_iter,
-    Simulated_psiA = sim_vals
-  )
-}))
-
-# Apply LOESS smoothing to each iteration
-loess_predictions <- psiA_draws %>%
-  group_by(Iteration) %>%
-  do({
-    mod <- try(loess(Simulated_psiA ~ Year, data = ., span = 0.75), silent = TRUE)
-    if (inherits(mod, "try-error")) {
-      return(data.frame(Year = .$Year, Pred = NA))
-    }
-    data.frame(Year = .$Year, Pred = predict(mod, newdata = data.frame(Year = .$Year)))
-  }) %>%
-  ungroup()
-
-# Summarise across iterations using quantiles
-loess_summary <- loess_predictions %>%
-  group_by(Year) %>%
-  summarise(
-    psiA_loess_mean = mean(Pred, na.rm = TRUE),
-    psiA_loess_lower = quantile(Pred, 0.025, na.rm = TRUE),
-    psiA_loess_upper = quantile(Pred, 0.975, na.rm = TRUE)
-  )
-
-occti_plot_logit <- ggplot() +
-
-  # LOESS smoothed curve and 95% interval from draws
-  geom_line(data = loess_summary, aes(x = Year, y = psiA_loess_mean), colour = "darkred", size = 1.2) +
-  geom_ribbon(data = loess_summary, aes(x = Year, ymin = psiA_loess_lower, ymax = psiA_loess_upper), fill = "red", alpha = 0.15) +
-
-  labs(x = "Year", y = "log(Occupancy Index)") +
-  theme_minimal() +
-  ggtitle(paste(species, "- logit-transformed occupancy with 95% percentile"))
-
-occ_data_logit_inv = occ_data_logit %>%
-mutate(psiA = inv.logit(psiA),
-psiA_L =  inv.logit(psiA_L), 
-psiA_U =  inv.logit(psiA_U))
-
-# Simulate from log-transformed occupancy index
-psiA_draws <- do.call(rbind, lapply(1:nrow(occ_data_logit_inv), function(i) {
-  year <- occ_data_logit_inv$Year[i]
-  mean_val <- (occ_data_logit_inv$psiA[i])
-  sd_val <- (occ_data_logit_inv$psiA_U[i] - occ_data_logit_inv$psiA_L[i]) / (2 * 1.96)
-
-  sim_vals <- rnorm(n_iter, mean = mean_val, sd = sd_val)
-
-  data.frame(
-    Year = year,
-    Iteration = 1:n_iter,
-    Simulated_psiA = sim_vals
-  )
-}))
-
-# Apply LOESS smoothing to each iteration
-loess_predictions <- psiA_draws %>%
-  group_by(Iteration) %>%
-  do({
-    mod <- try(loess(Simulated_psiA ~ Year, data = ., span = 0.75), silent = TRUE)
-    if (inherits(mod, "try-error")) {
-      return(data.frame(Year = .$Year, Pred = NA))
-    }
-    data.frame(Year = .$Year, Pred = predict(mod, newdata = data.frame(Year = .$Year)))
-  }) %>%
-  ungroup()
-
-# Summarise across iterations using quantiles
-loess_summary <- loess_predictions %>%
-  group_by(Year) %>%
-  summarise(
-    psiA_loess_mean = mean(Pred, na.rm = TRUE),
-    psiA_loess_lower = quantile(Pred, 0.025, na.rm = TRUE),
-    psiA_loess_upper = quantile(Pred, 0.975, na.rm = TRUE)
-  )
-
-occti_plot_logit_inv <- ggplot() +
-
-  # LOESS smoothed curve and 95% interval from draws
-  geom_line(data = loess_summary, aes(x = Year, y = psiA_loess_mean), colour = "darkred", size = 1.2) +
-  geom_ribbon(data = loess_summary, aes(x = Year, ymin = psiA_loess_lower, ymax = psiA_loess_upper), fill = "red", alpha = 0.15) +
-
-  labs(x = "Year", y = "log(Occupancy Index)") +
-  theme_minimal() +
-  ggtitle(paste(species, "- backtransformed from logit occupancy with 95% percentile")) +
-  ylim(0,1)
-
 # Combine and print
-combined_plot <- sparta_RW_plot + occti_plot_2 #+ sparta_plot + occti_plot_1 + occti_plot_2 + occti_plot_logit + occti_plot_logit_inv
+combined_plot <- sparta_RW_plot + occti_plot
 
 # ---- Save to file ----
 file_name <- paste0("occupancy_comparison_plots", "/", species, "_comparison.png")
