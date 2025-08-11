@@ -155,7 +155,7 @@ names(gb_uk_df) <- c("species", "region_name")
 
 # Keep only species-region combinations in params_df that are present in data
 params_df <- params_df %>%
-  semi_join(distinct(data, species, region_name), by = c("species", "region_name")) %>%
+  semi_join(distinct(data, species, region), by = c("species" = "species", "region_name" = "region")) %>%
   rbind(gb_uk_df)
 
 # NB: occLite needs to be installed locally with install_github to allow for the nodes to access functions. Nodes will access the functions as they are in the installed version, not in the state they are in after you called load_all()
