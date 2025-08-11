@@ -21,7 +21,7 @@ setwd("JASMIN_scripts_preparation")
 # Model parameters
 min.Recs <- 50 # 50 # number of records per species for inclusion
 nyr <- 2 # minimum number of years sampled
-nstart_vector <- 5 # Number of starting values
+n_start <- 5 # Number of starting values
 
 # specify group
 taxa_group = "Hoverflies"
@@ -65,80 +65,76 @@ occti_run = function(species, region_name){
   data_region$northing_scaled <- as.numeric(scale(data_region$northing))
   data_region$easting_scaled  <- as.numeric(scale(data_region$easting))
 
-  # For each n_start value specified
-  for (nstart_i in nstart_vector) {
+  # Run occupancy model with occti
+  occupancy_result <- try(
+    fit_occ_formatted(
+      spp = species,
+      obdata = data_region,
+      occformula = "~ northing_scaled + I(northing_scaled^2) + easting_scaled + I(easting_scaled^2)",
+      detformula = "~ logLL + SEAS",
+      covnames = c("northing_scaled", "easting_scaled"),
+      minyear = year_range[1],
+      maxyear = year_range[2],
+      trendyears = year_range[1],
+      nstart = n_start,
+      engine = "C"
+    ),
+    silent = TRUE
+  )
 
-    # Run occupancy model with occti
-    occupancy_result <- try(
-      fit_occ_formatted(
-        spp = species,
-        obdata = data_region,
-        occformula = "~ northing_scaled + I(northing_scaled^2) + easting_scaled + I(easting_scaled^2)",
-        detformula = "~ logLL + SEAS",
-        covnames = c("northing_scaled", "easting_scaled"),
-        minyear = year_range[1],
-        maxyear = year_range[2],
-        trendyears = year_range[1],
-        nstart = nstart_i,
-        engine = "C"
-      ),
-      silent = TRUE
-    )
+  # Check for error and extract message if needed
+  if (inherits(occupancy_result, "try-error")) {
+    status <- "failed"
+    
+    # Capture error message safely
+    error_message <- as.character(occupancy_result)
 
-    # Check for error and extract message if needed
-    if (inherits(occupancy_result, "try-error")) {
-      status <- "failed"
-      
-      # Capture error message safely
-      error_message <- as.character(occupancy_result)
-
-      # Define path and save the error message
-      if (!dir.exists("error_messages")) dir.create("error_messages")
-      error_file <- paste0("error_messages/", species, "_", region_name, "_nstart_", nstart_i, "_occti_error.txt")
-      writeLines(error_message, con = error_file)
-      
-    } else {
-      status <- "success"
-    }
-
-    # If model ran successfully, generate plot and save
-    if (status == "success") {
-      plot <- ggplot(occupancy_result$Index, aes(x = Year, y = psiA)) +
-        geom_line(size = 1, color = "blue") +
-        geom_ribbon(aes(ymin = psiA_L, ymax = psiA_U), alpha = 0.2) +
-        labs(x = "Year", y = "Occupancy Index") +
-        theme_minimal()
-
-      # Save plots
-      if (!dir.exists("plots")) dir.create("plots")
-      ggsave(paste0("plots/", species, "_", region_name, "_nstart_", nstart_i, ".png"), plot = plot)
-
-      # Save Results
-      if (!dir.exists("results")) dir.create("results")
-      saveRDS(occupancy_result, paste0("results/", species, "_", region_name, "_nstart_", nstart_i, "_occupancy_output.rds"))
-    }
-
-    # log run attributes
-    log_entry <- data.frame(
-      taxa_group = taxa_group,
-      species_name = species,
-      region = region_name,
-      JASMIN = TRUE,
-      queue = "long-serial",
-      n_nodes_requested = (length(allSpecies) * length(regions)),
-      node_start_time = format(node_start_time, "%Y-%m-%d %H:%M:%S"),
-      node_end_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
-      node_run_time = as.numeric(difftime(Sys.time(), node_start_time, units = "hours")),
-      n_start_val = nstart_i,
-      status = status,
-      stringsAsFactors = FALSE
-    )
-
-    # Save log entry
-    if (!dir.exists("logs")){ dir.create("logs")}
-    write.csv(log_entry, paste0("logs/", species, "_", region_name, "_nstart_", nstart_i, "_log.csv"), row.names = FALSE)
-
+    # Define path and save the error message
+    if (!dir.exists("error_messages")) dir.create("error_messages")
+    error_file <- paste0("error_messages/", species, "_", region_name, "_occti_error.txt")
+    writeLines(error_message, con = error_file)
+    
+  } else {
+    status <- "success"
   }
+
+  # If model ran successfully, generate plot and save
+  if (status == "success") {
+    plot <- ggplot(occupancy_result$Index, aes(x = Year, y = psiA)) +
+      geom_line(size = 1, color = "blue") +
+      geom_ribbon(aes(ymin = psiA_L, ymax = psiA_U), alpha = 0.2) +
+      labs(x = "Year", y = "Occupancy Index") +
+      theme_minimal()
+
+    # Save plots
+    if (!dir.exists("plots")) dir.create("plots")
+    ggsave(paste0("plots/", species, "_", region_name, ".png"), plot = plot)
+
+    # Save Results
+    if (!dir.exists("results")) dir.create("results")
+    saveRDS(occupancy_result, paste0("results/", species, "_", region_name, "_occupancy_output.rds"))
+  }
+
+  # log run attributes
+  log_entry <- data.frame(
+    taxa_group = taxa_group,
+    species_name = species,
+    region = region_name,
+    JASMIN = TRUE,
+    queue = "long-serial",
+    n_nodes_requested = (length(allSpecies) * length(regions)),
+    node_start_time = format(node_start_time, "%Y-%m-%d %H:%M:%S"),
+    node_end_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+    node_run_time = as.numeric(difftime(Sys.time(), node_start_time, units = "hours")),
+    n_start_val = n_start,
+    status = status,
+    stringsAsFactors = FALSE
+  )
+
+  # Save log entry
+  if (!dir.exists("logs")){ dir.create("logs")}
+  write.csv(log_entry, paste0("logs/", species, "_", region_name, "_log.csv"), row.names = FALSE)
+
 }
 
 # Generate the job name with the current date
@@ -168,7 +164,7 @@ sjob <- slurm_apply(
   nodes = nrow(params_df),
   cpus_per_node = 1,
   submit = TRUE,
-  global_objects = c("allSpecies", "regions", "data", "taxa_group", "nstart_vector"),
+  global_objects = c("allSpecies", "regions", "data", "taxa_group", "n_start"),
   slurm_options = list(time = "24:00:00", mem = 30000, error = "%a.err",
   account = "ceh_generic", partition = "standard", qos = "long")
 )
