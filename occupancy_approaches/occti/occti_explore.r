@@ -44,18 +44,18 @@ allSpecies = unique(data$species)
 regions = c(unique(data$region), "gb", "uk")
 
 # Prepare function to pass to each node
-occti_run = function(species, region){
+occti_run = function(species, region_name){
   
   # Record start time for later logging
   node_start_time = Sys.time()
 
   # Filtering for regions
-  if (region == "uk"){
+  if (region_name == "uk"){
     data_region = data
-  } else if (region == "gb"){
+  } else if (region_name == "gb"){
     data_region = data %>% filter(region != "ni")
   } else {
-    data_region = data %>% filter(region == region)
+    data_region = data %>% filter(region == region_name)
   }
 
   # Obtain date range
@@ -94,7 +94,7 @@ occti_run = function(species, region){
 
       # Define path and save the error message
       if (!dir.exists("error_messages")) dir.create("error_messages")
-      error_file <- paste0("error_messages/", species, "_", region, "_nstart_", nstart_i, "_occti_error.txt")
+      error_file <- paste0("error_messages/", species, "_", region_name, "_nstart_", nstart_i, "_occti_error.txt")
       writeLines(error_message, con = error_file)
       
     } else {
@@ -111,18 +111,18 @@ occti_run = function(species, region){
 
       # Save plots
       if (!dir.exists("plots")) dir.create("plots")
-      ggsave(paste0("plots/", species, "_", region, "_nstart_", nstart_i, ".png"), plot = plot)
+      ggsave(paste0("plots/", species, "_", region_name, "_nstart_", nstart_i, ".png"), plot = plot)
 
       # Save Results
       if (!dir.exists("results")) dir.create("results")
-      saveRDS(occupancy_result, paste0("results/", species, "_", region, "_nstart_", nstart_i, "_occupancy_output.rds"))
+      saveRDS(occupancy_result, paste0("results/", species, "_", region_name, "_nstart_", nstart_i, "_occupancy_output.rds"))
     }
 
     # log run attributes
     log_entry <- data.frame(
       taxa_group = taxa_group,
       species_name = species,
-      region = region,
+      region = region_name,
       JASMIN = TRUE,
       queue = "long-serial",
       n_nodes_requested = (length(allSpecies) * length(regions)),
@@ -135,8 +135,8 @@ occti_run = function(species, region){
     )
 
     # Save log entry
-    if (!dir.exists("logs")) dir.create("logs")
-    write.csv(log_entry, paste0("logs/", species, "_", region, "_nstart_", nstart_i, "_log.csv"), row.names = FALSE)
+    if (!dir.exists("logs")){ dir.create("logs")}
+    write.csv(log_entry, paste0("logs/", species, "_", region_name, "_nstart_", nstart_i, "_log.csv"), row.names = FALSE)
 
   }
 }
@@ -150,12 +150,12 @@ params_df <- expand.grid(allSpecies, unique(data$region))
 gb_uk_df <- expand.grid(allSpecies, c("gb", "uk"))
 
 # Rename columns (optional)
-names(params_df) <- c("species", "region")
-names(gb_uk_df) <- c("species", "region")
+names(params_df) <- c("species", "region_name")
+names(gb_uk_df) <- c("species", "region_name")
 
 # Keep only species-region combinations in params_df that are present in data
 params_df <- params_df %>%
-  semi_join(distinct(data, species, region), by = c("species", "region")) %>%
+  semi_join(distinct(data, species, region_name), by = c("species", "region_name")) %>%
   rbind(gb_uk_df)
 
 # NB: occLite needs to be installed locally with install_github to allow for the nodes to access functions. Nodes will access the functions as they are in the installed version, not in the state they are in after you called load_all()
