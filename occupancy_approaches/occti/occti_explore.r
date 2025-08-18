@@ -14,6 +14,8 @@ library(occLite)
 library(rslurm)
 library(dplyr)
 library(ggplot2)
+library(stringr)
+library(tidyr)
 
 # Set the working directory if you have not already
 setwd("JASMIN_scripts_preparation")
@@ -24,10 +26,33 @@ nyr <- 2 # minimum number of years sampled
 n_start <- 5 # Number of starting values
 
 # specify group
-taxa_group = "Hoverflies"
+taxa_group = "Bees"
 
-# load data
-data = read.csv("occurence_datasets/hoverfly_2025_cleaned_data_for_occti.csv")
+# Formatting for bees dataset only
+data = read.csv("occurence_datasets/bee_data_2025.csv") %>%
+filter(lower_date == upper_date) %>% # removes 27181 rows
+rename(date = lower_date, gridref = osgr_to_gridref, species = species_name)
+
+# Formatting for ants dataset only
+#data = readRDS("occurence_datasets/monad_occupancy_dataset_ants.rds")
+# data = data %>%
+# rename(date = lower_date, gridref = GRIDREF, species = tik)
+
+# Formatting required for dragonflies data
+# load("occurence_datasets/odonata_2022.rdata")
+# data = visitData$spp_vis %>%
+#   pivot_longer(
+#     cols = -visit,
+#     names_to = "species",
+#     values_to = "present"
+#   ) %>%
+#   filter(present) %>%
+#   select(-present) %>%
+#   mutate(
+#     gridref = str_extract(visit, "^[A-Z]{2}\\d{4}"),
+#     date = str_extract(visit, "\\d{4}-\\d{2}-\\d{2}") %>% as.Date()
+#   ) %>%
+#   select(-visit)
 
 # Formatting required for butterfly dataset only
 # data = data %>%
@@ -35,7 +60,7 @@ data = read.csv("occurence_datasets/hoverfly_2025_cleaned_data_for_occti.csv")
 # select(-TO_ENDDATE, -YEAR)
 
 # Prepare_data is a wrapper function that removes invalid grid references, removes grid references above a 1 km monad resolution, coverts references below a 1km resolution to 1km, identifies country of the monad grid reference,
-data = prep_occ_data(data = data, subset = TRUE, min.Recs = 10, nyr = 2)
+data = prep_occ_data(data = data, subset = TRUE, min.Recs = min.Recs, nyr = nyr)
 
 # Obtain all species after subsetting
 allSpecies = unique(data$species)
