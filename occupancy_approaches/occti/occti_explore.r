@@ -26,12 +26,15 @@ nyr <- 2 # minimum number of years sampled
 n_start <- 5 # Number of starting values
 
 # specify group
-taxa_group = "Bees"
+taxa_group = "Dragonflies"
 
 # Formatting for bees dataset only
-data = read.csv("occurence_datasets/bee_data_2025.csv") %>%
-filter(lower_date == upper_date) %>% # removes 27181 rows
-rename(date = lower_date, gridref = osgr_to_gridref, species = species_name)
+# data = read.csv("occurence_datasets/bee_data_2025.csv") %>%
+# filter(lower_date == upper_date) %>% # removes 27181 rows
+# rename(date = lower_date, gridref = osgr_to_gridref, species = species_name)
+
+# No formatting required for Dragonflies
+data = read.csv("occurence_datasets/odonata_cleaned_data_2025.csv")
 
 # Formatting for ants dataset only
 #data = readRDS("occurence_datasets/monad_occupancy_dataset_ants.rds")
