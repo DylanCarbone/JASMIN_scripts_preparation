@@ -4,7 +4,7 @@ author: "Dylan"
 output: HTML
 ---
 
-# 0) Setup
+# Setup
 
 ```{r}
 knitr::opts_chunk$set(echo = TRUE, message = TRUE, warning = TRUE)
@@ -20,11 +20,15 @@ library(tidyr)
 # use local package helpers (e.g., posterior_samp_occti, load_occti_outputs)
 load_all("../occLite")
 
+# Trend start year
+trend_start_year = 1970
+trend_end_year = 2024
+
 ```
 
-# 1) Ants (Formicidae) comparison with sparta
+# Ants - sparta and occti
 
-## 1.1 Load OCCTI outputs
+## Load OCCTI outputs
 
 ```{r}
 
@@ -37,13 +41,15 @@ pull(species)
 
 occti_ants_all_sp_outputs <- load_occti_outputs(
   results_dir = "past_jasmin_datalabs_runs/_rslurm_explore_occ_run_OCCTI_ANTS_14_08_2025/results",
-  pattern = "uk_occupancy_output.rds"
+  pattern = "uk_occupancy_output.rds",
+  start_year = trend_start_year,
+  end_year = trend_end_year
 )[all_sp_ants]
 
 occti_ants_all_sp_outputs <- filter_occupancy(occti_ants_all_sp_outputs, min_years_post_filter = 3)
 ```
 
-## 1.2 Generate OCCTI posterior samples
+## Generate OCCTI posterior samples
 
 ```{r}
 # Obtain posterior occti samples
@@ -57,23 +63,25 @@ loess_results_ants_all_sp <- posterior_samp_occti(
 )
 ```
 
-## 1.3 Generate SPARTA posterior samples
+## Generate SPARTA posterior samples
 
 NB: I am only the species that passed the occti filter
 
 ```{r}
+
 sparta_ants_all_sp_posterior_samples <- applySamp_single(
   modPath = "past_jasmin_datalabs_runs/datalabs_ants_sparta_RW",
   region = "UK",
   nSamps = 999,
   minObs = NULL,
   speciesToKeep = paste(names(occti_ants_all_sp_outputs), collapse = ","),
-  t0 = 2000,
-  tn = 2020
+  t0 = trend_start_year,
+  tn = trend_end_year,
 )[[1]]
+
 ```
 
-## 1.4 Compute MSI (BMA) for all ant species
+## Compute BMA for all ant species
 
 ```{r}
 # 1) bma plot sparta vs occti ants - they're different
@@ -84,31 +92,32 @@ bma_sparta_ants_all_sp = readRDS("bma_runs/bma_sparta_ants_all_sp.rds")
 bma_occti_ants_all_sp = readRDS("bma_runs/bma_occti_ants_all_sp.rds")
 
 sparta_plots_ants_all_sp <- summariseMSI(bma_sparta_ants_all_sp, label = "sparta all species",
-                                      minYear = 1980,
-                                      maxYear = 2022,
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
 
 occti_plots_ants_all_sp <- summariseMSI(bma_occti_ants_all_sp,
                                       label = "occti all species",
-                                      minYear = 1980,
-                                      maxYear = 2022,
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
 
-sparta_plots_ants_all_sp$indicator + occti_plots_ants_all_sp$indicator
+plot = sparta_plots_ants_all_sp$indicator + occti_plots_ants_all_sp$indicator
+ggsave("bma_plots/ants_all_sp.png", plot = plot, width = 16, height = 4, dpi = 300)
 ```
 
+## Most common ant species
 
-## reset by removing CI and Z-score filters
+reset by removing CI and Z-score filters
+
 ```{r}
 occti_ants_all_sp_outputs <- load_occti_outputs(
-  results_dir = "past_jasmin_datalabs_runs/_rslurm_explore_occ_run_OCCTI_ANTS_14_08_2025/results"
+  results_dir = "past_jasmin_datalabs_runs/_rslurm_explore_occ_run_OCCTI_ANTS_14_08_2025/results",
+  pattern = "uk_occupancy_output.rds",
+  start_year = trend_start_year,
+  end_year = trend_end_year
 )
 
-```
-
-## 1.5 Most common ant species
-
-```{r}
 ants_most_common_sp = readRDS("occurence_datasets/monad_occupancy_dataset_ants.rds") %>%
   rename(date = lower_date, gridref = GRIDREF, species = tik) %>%
   count(species) %>%
@@ -134,8 +143,8 @@ sparta_ants_most_common_sp_posterior_samples <- applySamp_single(
   nSamps = 999,
   minObs = NULL,
   speciesToKeep = paste(ants_most_common_sp, collapse = ","),
-  t0 = 2000,
-  tn = 2020)[[1]]
+  t0 = trend_start_year,
+  tn = trend_end_year)[[1]]
 
 bma_sparta_ants_most_common_sp = calculate_indicator(sparta_ants_most_common_sp_posterior_samples, sparta_output = TRUE, method = "bma", bma_ind = "prime", save_outputs = TRUE, outputs_path = "bma_runs/bma_sparta_ants_most_common_sp.rds")
 bma_occti_ants_most_common_sp = calculate_indicator(loess_results_ants_most_common_sp, sparta_output = FALSE, method = "bma", bma_ind = "prime", save_outputs = TRUE, outputs_path = "bma_runs/bma_occti_ants_most_common_sp.rds")
@@ -144,20 +153,21 @@ bma_sparta_ants_most_common_sp = readRDS("bma_runs/bma_sparta_ants_most_common_s
 bma_occti_ants_most_common_sp = readRDS("bma_runs/bma_occti_ants_most_common_sp.rds")
 
 sparta_plots_ants_most_common_sp <- summariseMSI(bma_sparta_ants_most_common_sp, label = "sparta most common species",
-                                      minYear = 1980,
-                                      maxYear = 2022,
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
 
 occti_plots_ants_most_common_sp <- summariseMSI(bma_occti_ants_most_common_sp,
                                       label = "occti most common species",
-                                      minYear = 1980,
-                                      maxYear = 2022,
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
 
-sparta_plots_ants_most_common_sp$indicator + occti_plots_ants_most_common_sp$indicator
+plot = sparta_plots_ants_most_common_sp$indicator + occti_plots_ants_most_common_sp$indicator
+ggsave("bma_plots/ants_most_common_sp.png", plot = plot, width = 16, height = 4, dpi = 300)
 ```
 
-## 1.6 Least common ant species
+## Least common ant species
 
 ```{r}
 ants_least_common_sp = readRDS("occurence_datasets/monad_occupancy_dataset_ants.rds") %>%
@@ -186,8 +196,8 @@ sparta_ants_least_common_sp_posterior_samples <- applySamp_single(
   nSamps = 999,
   minObs = NULL,
   speciesToKeep = paste(ants_least_common_sp, collapse = ","),
-  t0 = 2000,
-  tn = 2020)[[1]]
+  t0 = trend_start_year,
+  tn = trend_end_year)[[1]]
 
 bma_sparta_ants_least_common_sp = calculate_indicator(sparta_ants_least_common_sp_posterior_samples, sparta_output = TRUE, method = "bma", bma_ind = "prime", save_outputs = TRUE, outputs_path = "bma_runs/bma_sparta_ants_least_common_sp.rds")
 bma_occti_ants_least_common_sp = calculate_indicator(loess_results_ants_least_common_sp, sparta_output = FALSE, method = "bma", bma_ind = "prime", save_outputs = TRUE, outputs_path = "bma_runs/bma_occti_ants_least_common_sp.rds")
@@ -196,20 +206,23 @@ bma_sparta_ants_least_common_sp = readRDS("bma_runs/bma_sparta_ants_least_common
 bma_occti_ants_least_common_sp = readRDS("bma_runs/bma_occti_ants_least_common_sp.rds")
 
 sparta_plots_ants_least_common_sp <- summariseMSI(bma_sparta_ants_least_common_sp, label = "sparta least common species",
-                                      minYear = 1980,
-                                      maxYear = 2022,
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
 
 occti_plots_ants_least_common_sp <- summariseMSI(bma_occti_ants_least_common_sp,
                                       label = "occti least common species",
-                                      minYear = 1980,
-                                      maxYear = 2022,
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
+
+plot = sparta_plots_ants_least_common_sp$indicator + occti_plots_ants_least_common_sp$indicator
+ggsave("bma_plots/ants_least_common_sp.png", plot = plot, width = 16, height = 4, dpi = 300)
 ```
 
-# 2) Dragonflies (Odonata)
+# Dragonflies - sparta and occti
 
-## 2.1 Load OCCTI outputs
+## Load OCCTI outputs
 
 ```{r}
 # Load raw data for later comparisons of most and least common species
@@ -235,7 +248,9 @@ filter(n >= 50) %>%
 pull(species)
 
 occti_dg_flies_all_sp_outputs <- load_occti_outputs("past_jasmin_datalabs_runs/dragonflies_results_12_08_2025",
-pattern = "uk_occupancy_output.rds")[all_sp_dg_flies]
+  pattern = "uk_occupancy_output.rds",
+  start_year = trend_start_year,
+  end_year = trend_end_year)[all_sp_dg_flies]
 
 # Apply filter
 occti_dg_flies_all_sp_outputs <- filter_occupancy(occti_dg_flies_all_sp_outputs)
@@ -245,7 +260,7 @@ length(names(occti_dg_flies_all_sp_outputs))
 length(list.files("past_runs_sparta/Odonata_2022_Powney"))
 ```
 
-## 2.2 Generate OCCTI posterior samples
+## Generate OCCTI posterior samples
 
 ```{r}
 # Obtain posterior occti samples
@@ -260,7 +275,7 @@ loess_results_dg_flies_all_sp <- posterior_samp_occti(
 
 ```
 
-## 2.3 Generate SPARTA posterior samples
+## Generate SPARTA posterior samples
 
 ```{r}
 sparta_dg_flies_all_sp_posterior_samples <- applySamp_single(
@@ -270,11 +285,11 @@ sparta_dg_flies_all_sp_posterior_samples <- applySamp_single(
   minObs = NULL,
   write = FALSE,
   speciesToKeep = paste(names(occti_dg_flies_all_sp_outputs), collapse = ","),
-  t0 = 2000,
-  tn = 2020)[[1]]
+  t0 = trend_start_year,
+  tn = trend_end_year)[[1]]
 ```
 
-## 2.4 Compute MSI (BMA) for all dragonflies
+## Compute BMA for all dragonflies
 
 ```{r}
 bma_sparta_dg_flies_all_sp = calculate_indicator(sparta_dg_flies_all_sp_posterior_samples, sparta_output = TRUE, method = "bma", bma_ind = "prime", save_outputs = TRUE, outputs_path = "bma_runs/bma_sparta_dg_flies_all_sp.rds")
@@ -285,23 +300,29 @@ bma_occti_dg_flies_all_sp = readRDS("bma_runs/bma_occti_dg_flies_all_sp.rds")
 
 sparta_plots_dg_flies_all_sp <- summariseMSI(bma_sparta_dg_flies_all_sp, label = "sparta all species",
                                       minYear = 1970,
-                                      maxYear = 2022,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
 
 occti_plots_dg_flies_all_sp <- summariseMSI(bma_occti_dg_flies_all_sp,
                                       label = "occti all species",
                                       minYear = 1970,
-                                      maxYear = 2022,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
 
-sparta_plots_dg_flies_all_sp$indicator + occti_plots_dg_flies_all_sp$indicator
+plot = sparta_plots_dg_flies_all_sp$indicator + occti_plots_dg_flies_all_sp$indicator
+ggsave("bma_plots/dragonflies_all_sp.png", plot = plot, width = 16, height = 4, dpi = 300)
 
 ```
 
 
-## 1.5 Most common dragonflies species
+## Most common dragonflies species
 
 ```{r}
+occti_dg_flies_all_sp_outputs <- load_occti_outputs("past_jasmin_datalabs_runs/dragonflies_results_12_08_2025",
+  pattern = "uk_occupancy_output.rds",
+  start_year = trend_start_year,
+  end_year = trend_end_year)
+
 dg_flies_most_common_sp = dg_flies_data %>%
   count(species) %>%
   arrange(desc(n)) %>%
@@ -326,8 +347,8 @@ sparta_dg_flies_most_common_sp_posterior_samples <- applySamp_single(
   nSamps = 999,
   minObs = NULL,
   speciesToKeep = paste(dg_flies_most_common_sp, collapse = ","),
-  t0 = 2000,
-  tn = 2020)[[1]]
+  t0 = trend_start_year,
+  tn = trend_end_year)[[1]]
 
 bma_sparta_dg_flies_most_common_sp = calculate_indicator(sparta_dg_flies_most_common_sp_posterior_samples, sparta_output = TRUE, method = "bma", bma_ind = "prime", save_outputs = TRUE, outputs_path = "bma_runs/bma_sparta_dg_flies_most_common_sp.rds")
 bma_occti_dg_flies_most_common_sp = calculate_indicator(loess_results_dg_flies_most_common_sp, sparta_output = FALSE, method = "bma", bma_ind = "prime", save_outputs = TRUE, outputs_path = "bma_runs/bma_occti_dg_flies_most_common_sp.rds")
@@ -336,15 +357,18 @@ bma_sparta_dg_flies_most_common_sp = readRDS("bma_runs/bma_sparta_dg_flies_most_
 bma_occti_dg_flies_most_common_sp = readRDS("bma_runs/bma_occti_dg_flies_most_common_sp.rds")
 
 sparta_plots_dg_flies_most_common_sp <- summariseMSI(bma_sparta_dg_flies_most_common_sp, label = "sparta most common species",
-                                      minYear = 1980,
-                                      maxYear = 2022,
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
 
 occti_plots_dg_flies_most_common_sp <- summariseMSI(bma_occti_dg_flies_most_common_sp,
                                       label = "occti most common species",
-                                      minYear = 1980,
-                                      maxYear = 2022,
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
+
+plot = sparta_plots_dg_flies_most_common_sp$indicator + occti_plots_dg_flies_most_common_sp$indicator
+ggsave("bma_plots/dragonflies_most_common_sp.png", plot = plot, width = 16, height = 4, dpi = 300)
 ```
 
 ## 1.6 Least common dragonfly species
@@ -376,8 +400,8 @@ sparta_dg_flies_least_common_sp_posterior_samples <- applySamp_single(
   nSamps = 999,
   minObs = NULL,
   speciesToKeep = paste(dg_flies_least_common_sp, collapse = ","),
-  t0 = 2000,
-  tn = 2020)[[1]]
+  t0 = trend_start_year,
+  tn = trend_end_year)[[1]]
 
 bma_sparta_dg_flies_least_common_sp = calculate_indicator(sparta_dg_flies_least_common_sp_posterior_samples, sparta_output = TRUE, method = "bma", bma_ind = "prime", save_outputs = TRUE, outputs_path = "bma_runs/bma_sparta_dg_flies_least_common_sp.rds")
 bma_occti_dg_flies_least_common_sp = calculate_indicator(loess_results_dg_flies_least_common_sp, sparta_output = FALSE, method = "bma", bma_ind = "prime", save_outputs = TRUE, outputs_path = "bma_runs/bma_occti_dg_flies_least_common_sp.rds")
@@ -386,20 +410,38 @@ bma_sparta_dg_flies_least_common_sp = readRDS("bma_runs/bma_sparta_dg_flies_leas
 bma_occti_dg_flies_least_common_sp = readRDS("bma_runs/bma_occti_dg_flies_least_common_sp.rds")
 
 sparta_plots_dg_flies_least_common_sp <- summariseMSI(bma_sparta_dg_flies_least_common_sp, label = "occti least common species",
-                                      minYear = 1980,
-                                      maxYear = 2022,
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
 
 occti_plots_dg_flies_least_common_sp <- summariseMSI(bma_occti_dg_flies_least_common_sp,
                                       label = "occti least common species",
-                                      minYear = 1980,
-                                      maxYear = 2022,
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
+
+plot = sparta_plots_dg_flies_least_common_sp$indicator + occti_plots_dg_flies_least_common_sp$indicator
+ggsave("bma_plots/dragonflies_least_common_sp.png", plot = plot, width = 16, height = 4, dpi = 300)
 ```
 
-# 2) Hoverflies
+# Produce comparative plots for occti-sparta
 
-## 2.1 Load OCCTI outputs
+Here, I produce comparisons for individual species. I start with dragonflies.
+```{r}
+
+produce_comparison_plots(loess_results_dg_flies_all_sp, "past_runs_sparta/Odonata_2022_Powney", output_folder = "dg_flies_sparta_occti_comparison", sparta_region = NULL)
+produce_comparison_plots(loess_results_dg_flies_most_common_sp, "past_runs_sparta/Odonata_2022_Powney", output_folder = "dg_flies_most_common_sparta_occti_comparison", sparta_region = NULL)
+produce_comparison_plots(loess_results_dg_flies_least_common_sp, "past_runs_sparta/Odonata_2022_Powney", output_folder = "dg_flies_least_common_sparta_occti_comparison", sparta_region = NULL)
+
+produce_comparison_plots(loess_results_ants_all_sp, "past_jasmin_datalabs_runs/_rslurm_dylcar_explore_occ_run_SPARTA_ANTS_22_07_2025", output_folder = "ants_sparta_occti_comparison", sparta_region = NULL)
+produce_comparison_plots(loess_results_ants_most_common_sp, "past_jasmin_datalabs_runs/_rslurm_dylcar_explore_occ_run_SPARTA_ANTS_22_07_2025", output_folder = "ants_most_common_sparta_occti_comparison", sparta_region = NULL)
+produce_comparison_plots(loess_results_ants_least_common_sp, "past_jasmin_datalabs_runs/_rslurm_dylcar_explore_occ_run_SPARTA_ANTS_22_07_2025", output_folder = "ants_least_common_sparta_occti_comparison", sparta_region = NULL)
+
+```
+
+# Hoverflies - occti
+
+## Load OCCTI outputs
 
 ```{r}
 
@@ -409,7 +451,10 @@ filter(n >= 50) %>%
 pull(species)
 
 occti_hv_flies_all_sp_outputs <- load_occti_outputs("past_jasmin_datalabs_runs/hoverflies_results_11_08_2025",
-pattern = "uk_occupancy_output.rds")[all_sp_hv_flies] 
+  pattern = "uk_occupancy_output.rds",
+  start_year = trend_start_year,
+  end_year = trend_end_year)[all_sp_hv_flies]
+
 occti_hv_flies_all_sp_outputs = occti_hv_flies_all_sp_outputs[!is.na(names(occti_hv_flies_all_sp_outputs))] # "Melangyna compositarum/labiatarum" failed to run. Removing as NA
 
 # Apply filter
@@ -417,7 +462,7 @@ occti_hv_flies_all_sp_outputs <- filter_occupancy(occti_hv_flies_all_sp_outputs)
 
 ```
 
-## 2.2 Generate OCCTI posterior samples
+## Generate OCCTI posterior samples
 
 ```{r}
 # Obtain posterior occti samples
@@ -432,9 +477,7 @@ loess_results_hv_flies_all_sp <- posterior_samp_occti(
 
 ```
 
-## 2.3 Generate SPARTA posterior samples
-
-## 2.4 Compute MSI (BMA) for all hoverflies
+## Compute BMA for all hoverflies
 
 ```{r}
 bma_occti_hv_flies_all_sp = calculate_indicator(loess_results_hv_flies_all_sp, sparta_output = FALSE, method = "bma", bma_ind = "prime", save_outputs = TRUE, outputs_path = "bma_runs/bma_occti_hv_flies_all_sp.rds")
@@ -443,21 +486,201 @@ bma_occti_hv_flies_all_sp = readRDS("bma_runs/bma_occti_hv_flies_all_sp.rds")
 
 occti_plots_hv_flies_all_sp <- summariseMSI(bma_occti_hv_flies_all_sp,
                                       label = "occti all species",
-                                      minYear = 1980,
-                                      maxYear = 2022,
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
                                       writePlot = TRUE)
+
+plot = occti_plots_hv_flies_all_sp$indicator
+ggsave("bma_plots/hoverflies_all_sp.png", plot = plot, width = 16, height = 4, dpi = 300)
 
 ```
 
-# 3) comparisons
+# Rovebeetles - sparta
 
-Here, I produce comparisons for individual species. I start with dragonflies.
 ```{r}
 
+library(dplyr)
+library(devtools)
+library(BRCindicators)
+library(tidyr)
+library(patchwork)
+library(stringr)
+library(tidyr)
+
+# use local package helpers (e.g., posterior_samp_occti, load_occti_outputs)
 load_all("../occLite")
 
-produce_comparison_plots(loess_results_dg_flies_all_sp, "past_runs_sparta/Odonata_2022_Powney", output_folder = "dg_flies_sparta_occti_comparison", sparta_region = NULL)
-produce_comparison_plots(loess_results_dg_flies_all_sp, "past_runs_sparta/Odonata_2022_Powney", output_folder = "dg_flies_sparta_occti_comparison", sparta_region = "UK")
+# Trend start year
+trend_start_year = 1970
+trend_end_year = 2024
 
+# I am going to load the posterior samples - They prirably need to be stored locally as accessing them from the shared folder can take very long
+# NB: The species output are all lowercase and this may affect merging. Please let me know if I should change this
+sparta_rv_beetles_all_sp_posterior_samples <- applySamp_single(
+  modPath = "RoveBeetles_Sp/_rslurm_RoveBeetles",
+  region = "UK",
+  nSamps = 999,
+  minObs = NULL,
+  speciesToKeep = NA,
+  t0 = trend_start_year,
+  tn = trend_end_year,
+)
+
+# Somewhere here we need to filter based on a species list...
+
+sparta_rv_beetles_all_sp_posterior_samples <- filter_rot(sparta_rv_beetles_all_sp_posterior_samples)
+
+# Produce an indicator
+bma_sparta_rv_beetles_all_sp = calculate_indicator(sparta_rv_beetles_all_sp_posterior_samples$posterior_samples, sparta_output = TRUE, method = "bma", bma_ind = "prime", save_outputs = TRUE, outputs_path = "bma_runs/bma_sparta_rv_beetles_all_sp.rds")
+
+```
+
+# Generate some new occupancy trends for comparison
+```{r}
+library(dplyr)
+library(devtools)
+library(BRCindicators)
+library(tidyr)
+library(patchwork)
+library(stringr)
+library(tidyr)
+
+# use local package helpers (e.g., posterior_samp_occti, load_occti_outputs)
+load_all("../occLite")
+
+sparta_dirs = c("past_jasmin_datalabs_runs/_rslurm_hoverfly", "past_jasmin_datalabs_runs/_rslurm_Dragonfly")
+taxon_names = c("hoverflies", "dragonflies")
+
+# Trend start year
+trend_start_year = 1970
+trend_end_year = 2024
+
+plots = list()
+
+for (i in seq_along(sparta_dirs)){
+
+  dir_i = sparta_dirs[i]
+  taxon_group = taxon_names[i]
+
+  # posterior sample sparta run outputs
+  sparta_posterior_samps <- applySamp_single(
+    modPath = dir_i,
+    region = "UK",
+    nSamps = 999,
+    minObs = NULL,
+    speciesToKeep = NA,
+    t0 = trend_start_year,
+    tn = trend_end_year,
+  )
+
+sparta_posterior_samps <- filter_rot(sparta_posterior_samps)
+
+bma_output = calculate_indicator(sparta_posterior_samps$posterior_samples, sparta_output = TRUE, method = "bma", bma_ind = "prime", save_outputs = FALSE)
+
+plot <- summariseMSI(bma_output,
+                                      label = paste0("sparta_taxon_group_", taxon_group),
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
+                                      writePlot = TRUE)
+
+plots[[taxon_group]] = plot
+
+}
+
+saveRDS(plots, "bma_runs_dg_flies_hv_flies.rds")
+
+```
+
+
+# Combining posterior samples for England Indicator
+
+```{r}
+library(dplyr)
+library(devtools)
+library(BRCindicators)
+library(tidyr)
+library(patchwork)
+library(stringr)
+library(tidyr)
+
+# use local package helpers (e.g., posterior_samp_occti, load_occti_outputs)
+load_all("../occLite")
+
+occ_dirs = c()
+sparta_used = c(TRUE, FALSE)
+
+# Trend start year
+trend_start_year = 1970
+trend_end_year = 2024
+
+all_posterior_samps = list()
+
+for (i in seq_along(occ_dirs)){
+
+  dir_i = occ_dirs[i]
+  sparta_i = sparta_used[i]
+
+  print(dir_i)
+  print(sparta_i)
+
+  if(sparta_i){
+
+  # posterior sample sparta run outputs
+  sparta_posterior_samps <- applySamp_single(
+    modPath = dir_i,
+    region = "UK",
+    nSamps = 999,
+    minObs = NULL,
+    speciesToKeep = NA,
+    t0 = trend_start_year,
+    tn = trend_end_year,
+  )
+
+  sparta_posterior_samps <- filter_rot(sparta_posterior_samps)
+
+  # Translate the wide posterior samples to a long format
+  sparta_posterior_samps = translate_sparta(sparta_posterior_samps)
+
+  all_posterior_samps[[i]] = sparta_posterior_samps
+
+  } else{
+
+  occti_outputs <- load_occti_outputs(
+    results_dir = dir_i,
+    pattern = "uk_occupancy_output.rds",
+    start_year = trend_start_year,
+    end_year = trend_end_year
+  )
+
+  # Apply filter
+  occti_outputs <- filter_occupancy(occti_outputs)
+
+  # Obtain posterior occti samples
+  posterior_samps <- posterior_samp_occti(
+    occti_outputs = occti_outputs,
+    save_plots = FALSE,
+    span = 0.75,
+    plot_width = 18,
+    plot_height = 6,
+    n_iter = 1000
+  )
+
+  # NB: we need to do species list filtering here
+
+  all_posterior_samps[[i]] = sparta_posterior_samp
+
+  }
+
+}
+
+saveRDS(all_posterior_samps, "all_groups_posterior_samps.RDS")
+
+all_bma = calculate_indicator(all_posterior_samps, sparta_output = FALSE, method = "bma", bma_ind = "prime", save_outputs = FALSE)
+
+all_bma_plots <- summariseMSI(all_bma,
+                                      label = "occti all species",
+                                      minYear = trend_start_year,
+                                      maxYear = trend_end_year,
+                                      writePlot = TRUE)
 
 ```

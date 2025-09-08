@@ -16,7 +16,7 @@ library(tidyr)
 library(lubridate)
 
 ###
-setwd("/home/users/dylcar/JASMIN_scripts_preparation/moths_sp/")
+setwd("/home/users/dylcar/JASMIN_scripts_preparation/Butterflies_sp/")
 data = read.csv("NMRS_data_1970to2020_180825_cleaned_monads.csv") %>%
 mutate(species = gsub("/", "_", species), year = year(ymd(date)))
 
@@ -31,10 +31,10 @@ nyr <- 2 # minimum number of years sampled
 n_start <- 5 # Number of starting valuesCheesit9
 
 # specify group
-taxa_group = "Moths"
+taxa_group = "Butterflies"
 
 # Formatting required for NEW butterfly dataset only
-data = read.csv("NMRS_data_1970to2020_180825.csv")
+data = read.csv("BNM_data_1970to2020_180825.csv")
 
 data = data %>% rename(species = taxon, date = record_date, gridref = km_sq) %>% 
 select(species, date, gridref) %>%
@@ -44,7 +44,7 @@ mutate(date = dmy(date), species = gsub("/", "_", species), year = year(date))
 data = prep_occ_data(data = data, subset = TRUE, min.Recs = min.Recs, nyr = nyr)
 
 #save the data so we have a record of it post-formatting
-write.csv(data, "NMRS_data_1970to2020_180825_cleaned_monads.csv")
+write.csv(data, "BNM_data_1970to2020_180825_cleaned.csv")
 
 # Obtain all species after subsetting
 allSpecies = unique(data$species)
@@ -167,7 +167,7 @@ occti_run = function(species, region_name){
 }
 
 # Generate the job name with the current date
-jobname <- "explore_occ_run_OCCTI_MOTHS_22_08_2025"# paste0('explore_occ_run_OCCTI_', toupper(taxa_group), "_", format(Sys.Date(), "%d_%m_%Y"))
+jobname <- "explore_occ_run_OCCTI_BUTTERFLIES_22_08_2025"# paste0('explore_occ_run_OCCTI_', toupper(taxa_group), "_", format(Sys.Date(), "%d_%m_%Y"))
 
 # Create a dataframe with every combination of region and species for the parameters
 params_df <- expand.grid(allSpecies, unique(data$region))
