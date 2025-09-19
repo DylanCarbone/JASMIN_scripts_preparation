@@ -16,14 +16,14 @@ require('dplyr')
 
 # Load data
 # to change for each run # !!!
-setwd("/gws/nopw/j04/ceh_generic/dylcar/indicators_2025//Odonata_Sp")
+setwd("/gws/ssde/j25b/ceh_generic/dylcar/indicators_2025/Hoverflies_Sp")
 
 # Format hoverfly data - remove already completed species
-data = read.csv("odonata_cleaned_data_2025.csv") %>% mutate(species = gsub("/", "_", species), 
+data = read.csv("hoverfly_2025_cleaned_data_for_occti.csv") %>% mutate(species = gsub("/", "_", species), 
 date = ymd(date), year = year(date))
 
 # Use same name as previos runs/specify name of new run
-jobname = "_rslurm_Dragonfly"
+jobname = "_rslurm_hoverfly"
 
 # Filter out species that have already been modelled
 skip_sp = gsub(".rdata", "", basename(list.files(jobname, pattern = "*.rdata", recursive = TRUE)))
@@ -49,7 +49,7 @@ visitData <- formatOccData(taxa = data$species,
                                 site = data$gridref,
                                 survey = data$date)
                                 
-saveRDS(visitData, "odonata_Sp_filtered_start_years.rds")
+saveRDS(visitData, "hoverflies_Sp_filtered_start_years.rds")
 
 reg_data <- readRDS("../sq1km_UK_regions.rds")
 
@@ -82,6 +82,28 @@ slurm_occDetFunc <- function(taxa_name){
 }
 
 species_to_run = data %>% filter(!species %in% skip_sp) %>% pull(species) %>% unique()
+
+# NB: This deletes old logs inside the job folder
+old_job_err_files <- list.files(jobname, pattern = "\\.err$", full.names = TRUE)
+old_job_out_files <- list.files(jobname, pattern = "\\.out$", full.names = TRUE)
+
+# delete the files
+file.remove(old_job_err_files)
+file.remove(old_job_out_files)
+
+# log how many records there are for each years
+if(file.exists("species_number_tally.csv")){
+  file.remove("species_number_tally.csv")
+}
+
+species_number_tally = data %>% filter(species %in% species_to_run) %>%
+group_by(species, year) %>%
+summarise(n_entries = n())
+
+# Just to stop tibble concatenating it
+as.data.frame(species_number_tally)
+
+write.csv(species_number_tally, "species_number_tally.csv")
 
 # Create roster
 pars <- data.frame(taxa_name = species_to_run)
